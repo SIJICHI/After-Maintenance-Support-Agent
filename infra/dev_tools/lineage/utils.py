@@ -1,4 +1,4 @@
-# Copyright 2025 DataRobot, Inc.
+# Copyright 2026 DataRobot, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,3 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from datarobot_pulumi_utils.common.feature_flags import fetch_flag_statuses
+
+
+def is_lineage_feature_enabled() -> bool:
+    flag_name = "ENABLE_MCP_TOOLS_GALLERY_SUPPORT"
+    flag_status = fetch_flag_statuses([flag_name])
+    return flag_status[flag_name]

@@ -588,14 +588,11 @@ def test_agent_deployment_created_when_env(monkeypatch):
     import infra.agent as agent_infra
 
     # Reset mocks to clear calls from the initial import
-    agent_infra.pulumi_datarobot.PredictionEnvironment.reset_mock()
     agent_infra.pulumi_datarobot.DeploymentAssociationIdSettingsArgs.reset_mock()
     agent_infra.pulumi_datarobot.DeploymentPredictionsDataCollectionSettingsArgs.reset_mock()
     agent_infra.CustomModelDeployment.reset_mock()
     importlib.reload(agent_infra)
 
-    # Check that PredictionEnvironment was created
-    agent_infra.pulumi_datarobot.PredictionEnvironment.assert_called_once()
     # Check that CustomModelDeployment was created
     agent_infra.CustomModelDeployment.assert_called_once()
     agent_infra.pulumi.export.assert_any_call(
@@ -613,12 +610,10 @@ def test_agent_deployment_not_created_when_env_zero(monkeypatch):
     import infra.agent as agent_infra
 
     # Reset mocks to clear calls from the initial import
-    agent_infra.pulumi_datarobot.PredictionEnvironment.reset_mock()
     agent_infra.CustomModelDeployment.reset_mock()
     importlib.reload(agent_infra)
 
-    # Check that PredictionEnvironment and CustomModelDeployment were not called
-    agent_infra.pulumi_datarobot.PredictionEnvironment.assert_not_called()
+    # Check that CustomModelDeployment was not called
     agent_infra.CustomModelDeployment.assert_not_called()
 
 

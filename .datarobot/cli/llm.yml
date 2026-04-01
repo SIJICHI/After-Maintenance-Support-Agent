@@ -26,12 +26,22 @@ root:
     options:
       - name: "LLM Gateway"
         value: "gateway_direct.py"
+        requires: llm_gateway
       - name: "DataRobot Deployed LLM"
         value: "deployed_llm.py"
         requires: deployed_llm
       - name: "External LLM"
         value: "blueprint_with_external_llm.py"
         requires: external_llm
+      - name: "LLM Gateway with External Model"
+        value: "blueprint_with_llm_gateway.py"
+        requires: llm_gateway
+
+llm_gateway:
+  - env: LLM_DEFAULT_MODEL
+    type: llmgw_catalog
+    optional: false
+    help: "Choose an LLM from the DataRobot LLM Gateway catalog to use for your LLM Blueprint."
 
 deployed_llm:
   - env: TEXTGEN_DEPLOYMENT_ID

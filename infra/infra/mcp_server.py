@@ -23,6 +23,10 @@ import datarobot as dr
 from datarobot_pulumi_utils.pulumi import resolve_execution_environment_version
 from datarobot_pulumi_utils.pulumi.stack import PROJECT_NAME
 from datarobot_pulumi_utils.schema.exec_envs import RuntimeEnvironments
+from dev_tools.lineage.pulumi_managers import MCPToolMetadataPulumiManager
+from dev_tools.lineage.pulumi_managers import MCPPromptMetadataPulumiManager
+from dev_tools.lineage.pulumi_managers import MCPResourceMetadataPulumiManager
+from dev_tools.lineage.utils import is_lineage_feature_enabled
 
 from . import project_dir, use_case
 
@@ -557,12 +561,22 @@ registerd_model = pulumi_datarobot.RegisteredModel(
 )
 
 # Where to run the custom model
-base_prediction_environment = pulumi_datarobot.PredictionEnvironment(
-    resource_name=mcp_server_asset_name + " Prediction Environment",
-    name=mcp_server_asset_name,
-    platform=dr.enums.PredictionEnvironmentPlatform.DATAROBOT_SERVERLESS,
-    opts=pulumi.ResourceOptions(retain_on_delete=False),
-)
+if prediction_environment_id := os.environ.get(
+    "DATAROBOT_DEFAULT_PREDICTION_ENVIRONMENT"
+):
+    pulumi.info(f"Using existing prediction environment '{prediction_environment_id}'")
+
+    base_prediction_environment = pulumi_datarobot.PredictionEnvironment.get(
+        id=prediction_environment_id,
+        resource_name=mcp_server_asset_name + " Prediction Environment [PRE-EXISTING]",
+    )
+else:
+    base_prediction_environment = pulumi_datarobot.PredictionEnvironment(
+        resource_name=mcp_server_asset_name + " Prediction Environment",
+        name=mcp_server_asset_name,
+        platform=dr.enums.PredictionEnvironmentPlatform.DATAROBOT_SERVERLESS,
+        opts=pulumi.ResourceOptions(retain_on_delete=False),
+    )
 
 # Deploy the registered custom model
 deployment = pulumi_datarobot.Deployment(
@@ -598,3 +612,46 @@ mcp_custom_model_runtime_parameters: list[
         value=deployment.id.apply(lambda id: f"{id}"),
     )
 ]
+
+
+if is_lineage_feature_enabled():
+    mcp_tool_metadata_pulumi_manager = MCPToolMetadataPulumiManager()
+    mcp_tool_metadata_entities = mcp_tool_metadata_pulumi_manager.load_metadata()
+    mcp_tool_metadata_pulumi_resources = (
+        mcp_tool_metadata_pulumi_manager.create_pulumi_resources(
+            mcp_tool_metadata_entities,
+            mcp_server_asset_name,
+            custom_model.version_id,
+        )
+    )
+    mcp_tool_metadata_pulumi_manager.export_to_pulumi_stack(
+        mcp_tool_metadata_pulumi_resources
+    )
+
+    mcp_prompt_metadata_pulumi_manager = MCPPromptMetadataPulumiManager()
+    mcp_prompt_metadata_entities = mcp_prompt_metadata_pulumi_manager.load_metadata()
+    mcp_prompt_metadata_pulumi_resources = (
+        mcp_prompt_metadata_pulumi_manager.create_pulumi_resources(
+            mcp_prompt_metadata_entities,
+            mcp_server_asset_name,
+            custom_model.version_id,
+        )
+    )
+    mcp_prompt_metadata_pulumi_manager.export_to_pulumi_stack(
+        mcp_prompt_metadata_pulumi_resources
+    )
+
+    mcp_resource_metadata_pulumi_manager = MCPResourceMetadataPulumiManager()
+    mcp_resource_metadata_entities = (
+        mcp_resource_metadata_pulumi_manager.load_metadata()
+    )
+    mcp_resource_metadata_pulumi_resources = (
+        mcp_resource_metadata_pulumi_manager.create_pulumi_resources(
+            mcp_resource_metadata_entities,
+            mcp_server_asset_name,
+            custom_model.version_id,
+        )
+    )
+    mcp_resource_metadata_pulumi_manager.export_to_pulumi_stack(
+        mcp_resource_metadata_pulumi_resources
+    )

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 11.7.2
+- Updated components `base`, `llm`, `agent`, `mcp_server` to allow injecting existing prediction environment
+- Component `llm` updated from 11.4.12 to 11.4.17:
+  - Allow selecting specific model from LLM gateway catalog
+  - Offer option using LLM gateway with an external model. This requires the minimal version of CLI 0.2.55
+- Component `mcp_server` updated from 0.0.15 to 0.0.19:
+  - Added saving MCP metadata and lineage through pulumi after deployment
+- `dr` minimal version updated 0.2.50->0.2.55
+  - Added support for pulumi login during start and dotenv setup
+  - Auto generation of global pulumi config pass-phrase
+
 ## 11.7.1
 - Excluded LiteLLM releases `1.82.7` and `1.82.8` from resolution (security issue mitigation) for ALL components: agent, llm, fastapi_server, infra
 - Bumped `agent` component from 11.7.5 to 11.7.11:

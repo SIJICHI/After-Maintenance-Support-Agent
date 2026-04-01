@@ -60,6 +60,8 @@ print("\n.   - ".join(
 default_model: str = os.environ.get(
     "LLM_DEFAULT_MODEL", "datarobot/azure/gpt-5-mini-2025-08-07"
 )
+if not default_model.startswith("datarobot/"):
+    default_model = f"datarobot/{default_model}"
 
 # Verify everything is configured properly for this configuration option.
 validate_feature_flags(REQUIRED_FEATURE_FLAGS)

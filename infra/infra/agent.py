@@ -573,12 +573,24 @@ agent_agent_deployment_id: pulumi.Output[str] = cast(pulumi.Output[str], "None")
 agent_deployment_endpoint: pulumi.Output[str] = cast(pulumi.Output[str], "None")
 agent_deployment_a2a_endpoint: pulumi.Output[str] = cast(pulumi.Output[str], "None")
 if os.environ.get("AGENT_DEPLOY") != "0":
-    agent_prediction_environment = pulumi_datarobot.PredictionEnvironment(
-        resource_name=agent_asset_name + " Prediction Environment",
-        name=agent_asset_name + " Prediction Environment",
-        platform=dr.enums.PredictionEnvironmentPlatform.DATAROBOT_SERVERLESS,
-        opts=pulumi.ResourceOptions(retain_on_delete=False),
-    )
+    if prediction_environment_id := os.environ.get(
+        "DATAROBOT_DEFAULT_PREDICTION_ENVIRONMENT"
+    ):
+        pulumi.info(
+            f"Using existing prediction environment '{prediction_environment_id}'"
+        )
+
+        agent_prediction_environment = pulumi_datarobot.PredictionEnvironment.get(
+            id=prediction_environment_id,
+            resource_name=agent_asset_name + " Prediction Environment [PRE-EXISTING]",
+        )
+    else:
+        agent_prediction_environment = pulumi_datarobot.PredictionEnvironment(
+            resource_name=agent_asset_name + " Prediction Environment",
+            name=agent_asset_name + " Prediction Environment",
+            platform=dr.enums.PredictionEnvironmentPlatform.DATAROBOT_SERVERLESS,
+            opts=pulumi.ResourceOptions(retain_on_delete=False),
+        )
 
     agent_registered_model_args = RegisteredModelArgs(
         resource_name=agent_asset_name + " Registered Model",

@@ -16,7 +16,12 @@ import os
 from pathlib import Path
 import pytest
 from unittest.mock import patch, MagicMock, PropertyMock
+from unittest.mock import Mock
 from collections import namedtuple
+
+from dev_tools.lineage.pulumi_managers import MCPToolMetadataPulumiManager
+from dev_tools.lineage.pulumi_managers import MCPPromptMetadataPulumiManager
+from dev_tools.lineage.pulumi_managers import MCPResourceMetadataPulumiManager
 
 # Ensure the test directory is in sys.path for proper imports
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -30,6 +35,8 @@ def pulumi_mocks(monkeypatch, tmp_path):
     mock_use_case = MagicMock()
     mock_use_case.id = "mock-use-case-id"
     mock_project_dir = tmp_path
+    mock_prediction_environment = MagicMock()
+    mock_prediction_environment.id = "mock-prediction-environment-id"
     monkeypatch.setattr("infra.use_case", mock_use_case)
     monkeypatch.setattr("infra.project_dir", mock_project_dir)
 
@@ -112,6 +119,29 @@ def pulumi_mocks(monkeypatch, tmp_path):
     MockOutput.from_input = MagicMock()
     MockOutput.format = MagicMock()
     monkeypatch.setattr("pulumi.Output", MockOutput)
+
+    # Mock MCP metadata related module
+    monkeypatch.setattr(
+        "dev_tools.lineage.utils.is_lineage_feature_enabled",
+        Mock(return_value=True),
+    )
+    monkeypatch.setattr(MCPToolMetadataPulumiManager, "load_metadata", Mock())
+    monkeypatch.setattr(MCPToolMetadataPulumiManager, "create_pulumi_resources", Mock())
+    monkeypatch.setattr(MCPToolMetadataPulumiManager, "export_to_pulumi_stack", Mock())
+    monkeypatch.setattr(MCPPromptMetadataPulumiManager, "load_metadata", Mock())
+    monkeypatch.setattr(
+        MCPPromptMetadataPulumiManager, "create_pulumi_resources", Mock()
+    )
+    monkeypatch.setattr(
+        MCPPromptMetadataPulumiManager, "export_to_pulumi_stack", Mock()
+    )
+    monkeypatch.setattr(MCPResourceMetadataPulumiManager, "load_metadata", Mock())
+    monkeypatch.setattr(
+        MCPResourceMetadataPulumiManager, "create_pulumi_resources", Mock()
+    )
+    monkeypatch.setattr(
+        MCPResourceMetadataPulumiManager, "export_to_pulumi_stack", Mock()
+    )
 
     yield
     patcher.stop()
@@ -364,3 +394,98 @@ def test_custom_model_created(monkeypatch):
     )
     assert kwargs["use_case_ids"] == [mcp_infra.use_case.id]
     assert isinstance(kwargs["files"], list)
+
+
+def test_mcp_item_lineage_metadata(monkeypatch):
+    import importlib
+    import infra.mcp_server as mcp_infra
+
+    load_tool_metadata = mcp_infra.MCPToolMetadataPulumiManager.load_metadata
+    create_pulumi_tool_resources = (
+        mcp_infra.MCPToolMetadataPulumiManager.create_pulumi_resources
+    )
+    export_tool_to_pulumi_stack = (
+        mcp_infra.MCPToolMetadataPulumiManager.export_to_pulumi_stack
+    )
+    load_prompt_metadata = mcp_infra.MCPPromptMetadataPulumiManager.load_metadata
+    create_pulumi_prompt_resources = (
+        mcp_infra.MCPPromptMetadataPulumiManager.create_pulumi_resources
+    )
+    export_prompt_to_pulumi_stack = (
+        mcp_infra.MCPPromptMetadataPulumiManager.export_to_pulumi_stack
+    )
+    load_resource_metadata = mcp_infra.MCPResourceMetadataPulumiManager.load_metadata
+    create_pulumi_resource_resources = (
+        mcp_infra.MCPResourceMetadataPulumiManager.create_pulumi_resources
+    )
+    export_resource_to_pulumi_stack = (
+        mcp_infra.MCPResourceMetadataPulumiManager.export_to_pulumi_stack
+    )
+    load_tool_metadata.reset_mock()
+    create_pulumi_tool_resources.reset_mock()
+    export_tool_to_pulumi_stack.reset_mock()
+    load_prompt_metadata.reset_mock()
+    create_pulumi_prompt_resources.reset_mock()
+    export_prompt_to_pulumi_stack.reset_mock()
+    load_resource_metadata.reset_mock()
+    create_pulumi_resource_resources.reset_mock()
+    export_resource_to_pulumi_stack.reset_mock()
+    importlib.reload(mcp_infra)
+
+    mock_custom_model = mcp_infra.pulumi_datarobot.CustomModel.return_value
+    expected_actual_mcp_server_asset_name = "[unittest] [mcp_server]"
+    # check saving MCP tool metadata through pulumi
+    mcp_infra.MCPToolMetadataPulumiManager.load_metadata.assert_called_once_with()
+    args, _ = mcp_infra.MCPToolMetadataPulumiManager.create_pulumi_resources.call_args
+    (
+        actual_mcp_metadata_entities,
+        actual_mcp_server_asset_name,
+        actual_custom_model_version_id,
+    ) = args
+    assert actual_mcp_metadata_entities == load_tool_metadata.return_value
+    assert actual_mcp_server_asset_name == expected_actual_mcp_server_asset_name
+    assert actual_custom_model_version_id == mock_custom_model.version_id
+    args, _ = mcp_infra.MCPToolMetadataPulumiManager.export_to_pulumi_stack.call_args
+    (actual_mcp_metadata_pulumi_resources,) = args
+    assert (
+        actual_mcp_metadata_pulumi_resources
+        == create_pulumi_tool_resources.return_value
+    )
+    # check saving MCP prompt metadata through pulumi
+    mcp_infra.MCPPromptMetadataPulumiManager.load_metadata.assert_called_once_with()
+    args, _ = mcp_infra.MCPPromptMetadataPulumiManager.create_pulumi_resources.call_args
+    (
+        actual_mcp_metadata_entities,
+        actual_mcp_server_asset_name,
+        actual_custom_model_version_id,
+    ) = args
+    assert actual_mcp_metadata_entities == load_prompt_metadata.return_value
+    assert actual_mcp_server_asset_name == expected_actual_mcp_server_asset_name
+    assert actual_custom_model_version_id == mock_custom_model.version_id
+    args, _ = mcp_infra.MCPPromptMetadataPulumiManager.export_to_pulumi_stack.call_args
+    (actual_mcp_metadata_pulumi_resources,) = args
+    assert (
+        actual_mcp_metadata_pulumi_resources
+        == create_pulumi_prompt_resources.return_value
+    )
+    # check saving MCP resource metadata through pulumi
+    mcp_infra.MCPResourceMetadataPulumiManager.load_metadata.assert_called_once_with()
+    args, _ = (
+        mcp_infra.MCPResourceMetadataPulumiManager.create_pulumi_resources.call_args
+    )
+    (
+        actual_mcp_metadata_entities,
+        actual_mcp_server_asset_name,
+        actual_custom_model_version_id,
+    ) = args
+    assert actual_mcp_metadata_entities == load_resource_metadata.return_value
+    assert actual_mcp_server_asset_name == expected_actual_mcp_server_asset_name
+    assert actual_custom_model_version_id == mock_custom_model.version_id
+    args, _ = (
+        mcp_infra.MCPResourceMetadataPulumiManager.export_to_pulumi_stack.call_args
+    )
+    (actual_mcp_metadata_pulumi_resources,) = args
+    assert (
+        actual_mcp_metadata_pulumi_resources
+        == create_pulumi_resource_resources.return_value
+    )

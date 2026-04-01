@@ -785,7 +785,7 @@ wheels = [
 [[package]]
 name = "infra"
 version = "0.0.1"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "datarobot" },
     { name = "datarobot-pulumi-utils" },
