@@ -1,5 +1,5 @@
-import { StartNewChat } from '@/components/StartNewChat.tsx';
-import { useMainLayout } from '@/hooks/use-main-layout.ts';
+import { StartNewChat } from '@/components/block/chat/start-new-chat';
+import { useMainLayout } from '@/components/block/chat/main-layout-context';
 
 export function EmptyStatePage() {
   const { addChatHandler } = useMainLayout();

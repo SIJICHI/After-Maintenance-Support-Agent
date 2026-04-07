@@ -19,7 +19,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter as Router } from 'react-router-dom';
 import './App.css';
 import { App } from './App.tsx';
-import { queryClient } from '@/lib/query-client';
+import { queryClient } from '@/api/query-client';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { getBaseUrl } from '@/lib/url-utils';
 import { ThemeProvider } from '@/theme/theme-provider';

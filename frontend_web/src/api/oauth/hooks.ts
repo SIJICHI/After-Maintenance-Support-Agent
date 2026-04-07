@@ -12,8 +12,8 @@ import {
   OAuthAuthorizeCallback,
   IValidateOAuthIdentitiesResponse,
 } from './types';
-import { authKeys } from '@/api/auth/hooks.ts';
-import { queryClient } from '@/lib/query-client.ts';
+import { authKeys } from '@/api/auth/hooks';
+import { queryClient } from '@/api/query-client';
 
 export const useOauthProviders = () => {
   return useQuery<IOAuthProvider[], Error>({

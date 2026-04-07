@@ -67,13 +67,15 @@ tasks:
       - cmd: |
           cp AGENTS.md.template AGENTS.md
           [ -f agent/AGENTS.md ] && cat agent/AGENTS.md >> AGENTS.md
+          [ -f fastapi_server/AGENTS.md ] && cat fastapi_server/AGENTS.md >> AGENTS.md
+          [ -f frontend_web/AGENTS.md ] && cat frontend_web/AGENTS.md >> AGENTS.md
           [ -f infra/AGENTS.md ] && cat infra/AGENTS.md >> AGENTS.md
           true
         platforms: [linux, darwin]
-      - cmd: |
-          Copy-Item "AGENTS.md.template" "AGENTS.md"
-          if (Test-Path "agent\AGENTS.md") { Get-Content "agent\AGENTS.md" | Add-Content "AGENTS.md" }
-          if (Test-Path "infra\AGENTS.md") { Get-Content "infra\AGENTS.md" | Add-Content "AGENTS.md" }
+      - cmd: powershell -Command "Copy-Item 'AGENTS.md.template' 'AGENTS.md'; if (Test-Path 'agent\AGENTS.md') { Get-Content
+          'agent\AGENTS.md' | Add-Content 'AGENTS.md' }; if (Test-Path 'fastapi_server\AGENTS.md') { Get-Content 'fastapi_server\AGENTS.md'
+          | Add-Content 'AGENTS.md' }; if (Test-Path 'frontend_web\AGENTS.md') { Get-Content 'frontend_web\AGENTS.md' | Add-Content
+          'AGENTS.md' }; if (Test-Path 'infra\AGENTS.md') { Get-Content 'infra\AGENTS.md' | Add-Content 'AGENTS.md' }"
         platforms: [windows]
   lint:
     desc: "🧹 Run linters"

@@ -1,4 +1,4 @@
-# Copyright 2025 DataRobot, Inc.
+# Copyright 2026 DataRobot, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -117,6 +117,7 @@ def test_translate_complex() -> None:
             name="tool2",
             in_progress=True,
             error=None,
+            tool_call_id="t2",
         ),
         ExtendedBaseMessage(
             id=str(uuids[2]),
@@ -125,6 +126,7 @@ def test_translate_complex() -> None:
             name="tool1",
             in_progress=False,
             error="Failed",
+            tool_call_id=str(uuids[2]),
         ),
         ExtendedBaseMessage(
             id=str(uuids[4]),

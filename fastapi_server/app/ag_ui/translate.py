@@ -1,4 +1,4 @@
-# Copyright 2025 DataRobot, Inc.
+# Copyright 2026 DataRobot, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ class ExtendedBaseMessage(BaseMessage):
     in_progress: bool
     error: str | None
     tool_calls: list[ToolCall] | None = None
+    tool_call_id: str | None = None
 
 
 def translate_messages(messages: Iterable[Message]) -> Iterable[ExtendedBaseMessage]:
@@ -72,7 +73,8 @@ def translate_messages(messages: Iterable[Message]) -> Iterable[ExtendedBaseMess
                 id=tc.tool_call_id or str(tc.uuid),
                 role=Role.TOOL.value,
                 name=tc.name,
-                content=tc.content,
+                content=tc.content or "",
+                tool_call_id=tc.agui_id or str(tc.uuid),
                 in_progress=tc.in_progress,
                 error=tc.error,
             )

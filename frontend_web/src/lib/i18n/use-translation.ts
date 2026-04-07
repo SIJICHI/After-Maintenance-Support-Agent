@@ -9,16 +9,12 @@ type ExtendedTOptions = TOptions & {
   plural?: string;
 };
 
-i18n.init({
-  showSupportNotice: false,
-});
-
 // Import translation files
-import esTranslations from './locales/es_419.json';
+import esTranslations from './locales/es-419.json';
 import frTranslations from './locales/fr.json';
 import jaTranslations from './locales/ja.json';
 import koTranslations from './locales/ko.json';
-import ptTranslations from './locales/pt_BR.json';
+import ptTranslations from './locales/pt-BR.json';
 
 export const languages = [
   { id: 'en', name: 'English' },
@@ -79,7 +75,6 @@ i18n.use(initReactI18next).init({
   interpolation: {
     escapeValue: false,
   },
-
   react: {
     useSuspense: false,
   },
@@ -93,16 +88,24 @@ export const useTranslation = () => {
   /**
    * Wrapper around t
    * Adds support for 'plural' as an alias for 'defaultValue_other'
+   * Forwards via a loose signature: `key as string` does not satisfy ParseKeys, so i18next's
+   * `t` overloads can otherwise require (key, defaultValueString, options?).
    */
   const t: OriginalTFunction = useCallback(
     (...args: Parameters<OriginalTFunction>) => {
+      const forward = originalT as unknown as (
+        key: string | string[],
+        optionsOrDefault?: string | TOptions,
+        maybeOptions?: TOptions
+      ) => ReturnType<OriginalTFunction>;
+
       const [key, optionsOrDefaultValue, maybeOptions] = args;
 
       // t(key, defaultValue, options)
       if (typeof optionsOrDefaultValue === 'string') {
         const options = (maybeOptions as ExtendedTOptions) ?? {};
         const { plural, ...restOptions } = options;
-        return originalT(key as string, optionsOrDefaultValue, {
+        return forward(key as string, optionsOrDefaultValue, {
           ...restOptions,
           defaultValue_other: restOptions.defaultValue_other ?? plural,
         });
@@ -112,7 +115,7 @@ export const useTranslation = () => {
       const options = (optionsOrDefaultValue as ExtendedTOptions) ?? {};
       const { plural, ...restOptions } = options;
 
-      return originalT(key as string, {
+      return forward(key as string, {
         ...restOptions,
         defaultValue_other: restOptions.defaultValue_other ?? plural,
       });

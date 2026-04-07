@@ -1,18 +1,22 @@
-import {
+import type {
   APIChat,
   APIChatWithMessages,
   ChatListItem,
   MessageHistoryResponse,
   MessageResponse,
 } from './types';
-import { ContentPart, isToolInvocationPart, ToolInvocationUIPart } from '@/types/message.ts';
+import {
+  type ContentPart,
+  isToolInvocationPart,
+  type ToolInvocationUIPart,
+} from '@/components/block/chat/types';
 
 export function selectChats(res: { data: APIChat[] }): ChatListItem[] {
   return [...res.data]
     .map(chat => ({
       id: chat.thread_id,
       name: chat.name,
-      userId: chat.user_id,
+      userId: chat.user_uuid,
       createdAt: new Date(chat.created_at),
       updatedAt: chat.update_time ? new Date(chat.update_time) : null,
       metadata: chat.metadata,
@@ -20,6 +24,18 @@ export function selectChats(res: { data: APIChat[] }): ChatListItem[] {
     }))
     .sort((fChat, sChat) => (sChat.createdAt < fChat.createdAt ? -1 : 1));
 }
+
+const mapMessageToRole = (role: MessageHistoryResponse['role']): MessageResponse['role'] => {
+  switch (role) {
+    case 'developer':
+    case 'tool':
+      return 'system';
+    case 'activity':
+      return 'system';
+    default:
+      return role;
+  }
+};
 
 export function selectMessages(res: { data: APIChatWithMessages }): MessageResponse[] {
   const uiMessages: MessageResponse[] = [];
@@ -30,17 +46,15 @@ export function selectMessages(res: { data: APIChatWithMessages }): MessageRespo
     }
 
     const parts = mapMessageToContentPart(historyMessage);
+    const content = historyMessage.content ?? '';
     const uiMessage: MessageResponse = {
       id: historyMessage.id,
-      role:
-        historyMessage.role == 'developer' || historyMessage.role == 'tool'
-          ? 'system'
-          : historyMessage.role,
+      role: mapMessageToRole(historyMessage.role),
       createdAt: historyMessage?.timestamp ? new Date(historyMessage.timestamp) : new Date(),
       content: {
         format: 2,
         parts,
-        content: historyMessage.content,
+        content,
       },
     };
     uiMessages.push(uiMessage);
@@ -62,12 +76,14 @@ function tryParseArgs(args: string) {
   try {
     return JSON.parse(args);
   } catch (e) {
+    // eslint-disable-next-line no-console
+    console.debug('Error parsing arguments', e);
     return args;
   }
 }
 
 function mapMessageToContentPart(m: MessageHistoryResponse): ContentPart[] {
-  if ('toolCalls' in m && !!m.toolCalls && m.toolCalls.length) {
+  if (m.toolCalls?.length) {
     return m.toolCalls.map(
       t =>
         ({
@@ -82,7 +98,12 @@ function mapMessageToContentPart(m: MessageHistoryResponse): ContentPart[] {
     );
   }
 
-  return [{ type: 'text', text: m.content || '' }];
+  if (m.content) {
+    return [{ type: 'text', text: m.content }];
+  }
+
+  // TODO
+  return [{ type: 'text', text: 'Unsupported content type' }];
 }
 
 /**
@@ -95,11 +116,11 @@ function addResultToToolInvocation(
   historyMessage: MessageHistoryResponse,
   uiMessages: MessageResponse[]
 ): boolean {
-  if (historyMessage.role === 'tool' && !historyMessage.toolCalls && historyMessage.content) {
+  if (historyMessage.role === 'tool' && historyMessage.content) {
     return uiMessages.some((m: MessageResponse) => {
       const toolPart = getToolPart(m, historyMessage.id);
       if (toolPart) {
-        toolPart.toolInvocation.result = historyMessage.content;
+        toolPart.toolInvocation.result = historyMessage.content ?? undefined;
         toolPart.toolInvocation.state = 'result';
         return true;
       }

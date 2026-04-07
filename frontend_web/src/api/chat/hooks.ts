@@ -1,7 +1,8 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { deleteChat, getChatHistory, getChats, updateChat } from '@/api/chat/requests';
-import { chatsKeys } from '@/api/chat/keys';
-import { selectChats, selectMessages } from '@/api/chat/selectors';
+import { deleteChat, getChatHistory, getChats, updateChat } from './api-requests';
+import { chatsKeys } from './keys';
+import { selectChats, selectMessages } from './selectors';
+import { queryClient } from '../query-client';
 
 const staleTime = 60 * 1000;
 
@@ -13,9 +14,11 @@ export function useFetchChats() {
     staleTime,
   });
 }
+
 export function useDeleteChat() {
   return useMutation({
     mutationFn: ({ chatId }: { chatId: string }) => deleteChat({ chatId }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: chatsKeys.list }),
   });
 }
 

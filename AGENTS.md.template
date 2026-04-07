@@ -8,7 +8,7 @@ These instructions apply to all agents working in this repository.
 
 ## Run Project Locally
 
-Run the following shell commands to run the project locally
+Run the following shell commands to run the project locally (agent + backend + frontend)
 
 ```shell
 dr run dev

@@ -2,9 +2,9 @@ import { PATHS } from '@/constants/path.ts';
 import { lazy } from 'react';
 import { Navigate } from 'react-router-dom';
 import { SettingsLayout } from './pages/SettingsLayout';
-import { ChatPage } from './pages/Chat.tsx';
+import { ChatPage } from './pages/ChatPage';
 import { EmptyStatePage } from './pages/EmptyState.tsx';
-import { MainLayout } from './components/layout/MainLayout.tsx';
+import { MainLayout } from './pages/MainLayoutWithChatList';
 
 const OAuthCallback = lazy(() => import('./pages/OAuthCallback'));
 

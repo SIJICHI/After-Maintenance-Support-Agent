@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 11.8.0
+- Updated `AGENTS.md` file with the frontend & fastapi server instructions
+
 ## 11.7.2
 - Updated components `base`, `llm`, `agent`, `mcp_server` to allow injecting existing prediction environment
 - Component `llm` updated from 11.4.12 to 11.4.17:
@@ -31,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bumped `fastapi_server` component
 - Bumped `ag-ui-protocol` in `fastapi_server`: aligned LiteLLM constraints with the agent stack
 - Removed authlib from CLI interactive setup
+- Updated @dr-ui components: replaced deprecated i18next-parser with i18next-cli, updated Markdown
+- Migratet Chat to @dr-ui/chat and used it as reusable component
 
 ## 11.7.0
 - Bumped `agent` component from 11.6.20 to 11.7.5

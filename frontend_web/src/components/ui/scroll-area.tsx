@@ -17,13 +17,18 @@ function ScrollArea({
       className={cn('relative', className)}
       {...props}
     >
+      {/* 
+      [&>div]:block! is a workaround for the issue in Radix UI where the scroll area has display: table
+      https://github.com/radix-ui/primitives/issues/2964
+      https://github.com/shadcn-ui/ui/issues/8342
+      */}
       <ScrollAreaPrimitive.Viewport
         ref={scrollViewportRef}
         data-slot="scroll-area-viewport"
         className={`
           size-full rounded-[inherit] transition-[color,box-shadow] outline-none
           focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1
-          [&>div]:!block
+          [&>div]:block!
         `}
       >
         {children}

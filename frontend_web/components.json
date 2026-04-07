@@ -16,7 +16,8 @@
     "ui": "@/components/ui",
     "lib": "@/lib",
     "hooks": "@/hooks",
-    "theme": "@/theme"
+    "theme": "@/theme",
+    "api": "@/api"
   },
   "registries": {
     "@dr-ui": "https://dr-ui.datarobot.com/r/{name}.json"

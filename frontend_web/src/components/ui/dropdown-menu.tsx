@@ -35,7 +35,7 @@ function DropdownMenuContent({
         sideOffset={sideOffset}
         className={cn(
           // Background & Text
-          'bg-input text-secondary-foreground',
+          'bg-input text-foreground',
           // Positioning & Layering
           'z-50 origin-(--radix-dropdown-menu-content-transform-origin)',
           // Sizing
@@ -98,7 +98,7 @@ function DropdownMenuItem({
       className={cn(
         `
           daisbled:cursor-default
-          relative flex cursor-pointer items-center gap-2 px-4 py-2 text-sm outline-hidden select-none
+          relative flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-foreground outline-hidden select-none
           focus:bg-sidebar-accent
           data-[disabled]:pointer-events-none data-[disabled]:opacity-50
           data-[inset]:pl-8
@@ -248,7 +248,7 @@ function DropdownMenuLabel({
       data-inset={inset}
       className={cn(
         `
-          px-4 py-2 text-sm font-medium
+          mn-label px-4 py-2
           data-[inset]:pl-8
         `,
         className
@@ -275,7 +275,7 @@ function DropdownMenuShortcut({ className, ...props }: React.ComponentProps<'spa
   return (
     <span
       data-slot="dropdown-menu-shortcut"
-      className={cn('ml-auto text-xs tracking-widest text-secondary-foreground', className)}
+      className={cn('ml-auto caption-01 tracking-widest', className)}
       {...props}
     />
   );
