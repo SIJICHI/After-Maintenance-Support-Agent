@@ -159,6 +159,88 @@ Run the following shell command to validate the agent after deployment. If the r
 ```shell
 task agent:cli -- execute-deployment --user_prompt "Agent specific prompt to validate that it's working" --deployment_id <deployment_id>
 ```
+# MCP Server Development Instructions
+
+The MCP server MUST be implemented in the `mcp_server/` directory.
+By default it provides tools for DataRobot operations, but can be extended with custom tools for any domain.
+
+## MCP Server Development Guidelines
+
+IMPORTANT: Do NOT import code from `agent/` or `fastapi_server/` directories. The MCP server has independent dependencies to avoid conflicts. 
+IMPORTANT: The MCP server runs as an independent service. Agents connect to it via MCP protocol (HTTP), not direct Python imports.
+
+- You may modify files ONLY inside `mcp_server/` directory.
+- The MCP server is a standard FastMCP application:
+  * Tools live in `mcp_server/app/tools/`
+  * Prompts live in `mcp_server/app/prompts/`
+  * Resources live in `mcp_server/app/resources/`
+  * Configuration is in `mcp_server/app/core/`
+  * Tests are in `mcp_server/app/tests/`
+- Read `mcp_server/docs` to further understand the existing structure.
+
+## Tool Development Architecture
+
+The MCP server uses auto-discovery for tools:
+
+1. **Tool Definition** (`mcp_server/app/tools/{domain}_tools.py`): Define tools with `@dr_mcp_tool` decorator
+2. **Auto-Discovery**: Server automatically loads all tools from `mcp_server/app/tools/` on startup
+3. **MCP Protocol**: Agents discover and call tools via HTTP (no imports needed)
+
+**When adding new tools:**
+- Create tool functions in `app/tools/{domain}_tools.py`
+- Use `@dr_mcp_tool(tags={"category", "action"})` decorator
+- Define parameters with `Annotated[type, "description"]`
+- Return `ToolResult(structured_content={...})`
+- Tools are automatically discovered - no registration needed
+
+**CRITICAL - Tool Implementation Requirements:**
+
+All tool functions MUST be `async def` and return `ToolResult`. Example:
+
+```python
+from typing import Annotated
+from datarobot_genai.drmcp import dr_mcp_tool
+from fastmcp.tools.tool import ToolResult
+
+@dr_mcp_tool(tags={"domain", "action"})
+async def tool_name(
+    param: Annotated[str, "Parameter description for LLM"],
+) -> ToolResult:
+    """
+    Tool description that the LLM will see.
+    Be clear and specific about what the tool does.
+    """
+    # Your implementation here
+    result = {"key": "value"}
+    return ToolResult(structured_content=result)
+```
+
+## MCP Server Security
+
+- NEVER hardcode API keys or secrets in tool code. Use environment variables or runtime parameters.
+- Store credentials in `.env` file (never commit to git)
+- Access config via `app/core/user_config.py`
+- Use DataRobot credentials management for production deployments
+
+## Installing MCP Server packages
+
+Before making any changes to the mcp_server code, install dependencies by running shell command:
+
+```shell
+dr task run mcp_server:install
+```
+
+## MCP Server Testing
+
+```shell
+dr task run mcp_server:lint
+```
+
+```shell
+dr task run mcp_server:test
+```
+
+
 # Backend Development Instructions
 
 The agent application template includes a backend implementation in `fastapi_server/`.
@@ -169,6 +251,7 @@ By default it ships a backend implementing APIs endpoints for the frontend appli
 - The FastAPI backend in `fastapi_server/` already serves the chat API at `/api/v1/`.
   If the user's frontend needs new data endpoints, add them in `fastapi_server/app/api/v1/`.
 - The entry point for the backend can be found at `fastapi_server/app/main.py`
+- For POST endpoints accepting JSON body, use Pydantic models (not function parameters). Query params go in function signature, body params go in Pydantic model.
 
 ## Installing backend packages
 
@@ -209,6 +292,27 @@ IMPORTANT: The frontend depends on backend API endpoints and agent tool outputs 
   * Theming is in `frontend_web/src/theme/`
 - Read `frontend_web/README.md` to further understand the existing structure.
 
+### API Architecture
+
+The frontend uses a three-layer architecture for API calls:
+
+1. **API Client** (`src/api/apiClient.ts`): Pre-configured axios instance with base URL
+2. **API Requests** (`src/api/{feature}/api-requests.ts`): Functions that make HTTP calls using `apiClient`
+3. **React Query Hooks** (`src/api/{feature}/hooks.ts`): Hooks that wrap requests with React Query for caching/state
+4. **Pages**: Import and use the hooks
+
+**When adding new API endpoints:**
+- Create request functions in `src/api/{feature}/api-requests.ts` using `apiClient` (MUST use default import: `import apiClient from '@/api/apiClient'`)
+- Wrap them in React Query hooks in `src/api/{feature}/hooks.ts`
+- Import and use the hooks in your pages/components
+- Never call `fetch()` or create new axios instances - always use the configured `apiClient`
+
+**CRITICAL - API Path Requirements:**
+
+`apiClient` is already configured with `baseURL` that includes `/api`. Therefore:
+
+Including `/api` in the path will cause **double `/api/api/` URLs** and result in 404/405 errors.
+
 ## Frontend  Security
 - NEVER embed API keys, secrets, or credentials in frontend code. If the frontend needs to call
   external services, route those calls through `fastapi_server/` endpoints. Do not make direct external API
@@ -226,7 +330,14 @@ dr task run frontend_web:install
 
 ## Installing shadcn/ui components
 
-Before importing any shadcn/ui component (e.g. `Select`, `Tabs`, `Table`, `Popover`, `DatePicker`), check whether its file already exists in `frontend_web/src/components/ui/`. If it does NOT exist, run `npx shadcn@latest add <component>` from the `frontend_web/` directory before writing any code that imports it. Never import a shadcn component that has not been explicitly added — it will not exist on disk and will break the build.
+**CRITICAL**: Before writing ANY code that imports a shadcn/ui component, you MUST first verify the component file exists.
+
+**MANDATORY WORKFLOW:**
+1. **BEFORE** writing any import statement for a shadcn/ui component (e.g. `Select`, `Tabs`, `Table`, `Popover`, `DatePicker`, `Dialog`, `Accordion`, etc.)
+2. Check if the file exists: `frontend_web/src/components/ui/{component}.tsx`
+3. If the file does NOT exist, you MUST run: `npx shadcn@latest add {component} --overwrite` from the `frontend_web/` directory
+4. Wait for the installation to complete
+5. ONLY THEN write code that imports the component
 
 ## Frontend Testing
 

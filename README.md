@@ -51,6 +51,8 @@ It supports local development and testing, as well as one-command deployments to
   - [Prepare your local development environment](#prepare-your-local-development-environment)
   - [Run your agent](#run-your-agent)
 - [Develop your agent](#develop-your-agent)
+  - [Component documentation](#component-documentation)
+  - [DataRobot documentation](#datarobot-documentation)
 - [Deploy your agent](#deploy-your-agent)
 - [MCP server](#mcp-server)
 - [OAuth applications](#oauth-applications)
@@ -201,6 +203,7 @@ For more details for the individual wizard steps, click the dropdown below.
    - If left blank, a new Use Case will be created automatically.
 8. Specify your LLM integration and press `Enter`.
    - For additional information on LLM configuration, see the [LLM configuration documentation](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-llm-providers-metadata.html).
+   - If you choose **DataRobot Deployed LLM**, you enter the deployment ID for your custom model LLM (`LLM_DEPLOYMENT_ID`). The template sets `USE_DATAROBOT_LLM_GATEWAY=0` automatically so traffic goes to that deployment rather than the LLM Gateway.
 9. Review the `.env` configuration summary displayed and press `Enter` to confirm.
 
    > NOTE: This step will take several minutes to complete.
@@ -262,14 +265,43 @@ For structure and required components, see [AGENTS.md](AGENTS.md#agent-structure
 The template includes **chat history** support: conversation context is injected into the agent so multi-turn chats stay consistent.
 The frontend uses the **DataRobot UI component registry** (`@dr-ui`) for theming and reusable components; you can customize the UI via the shared theme and component set.
 
-See the following documentation for more details:
+## Component documentation
 
-- [Customize your agent](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-development.html)
-- [Add tools to your agent](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-tools-integrate.html)
-- [Configure LLM providers](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-llm-providers.html)
-- [Use the agent CLI](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-cli-guide.html)
-- [Add Python requirements](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-python-packages.html)
-- [Manage prompts](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-development.html#modify-agent-prompts)
+The `docs/` directory contains detailed documentation for each component of this template:
+
+| Document | Description |
+|---|---|
+| [Agent](docs/agent/README.md) | Agent architecture, file structure, framework-specific guides, tool integration, front servers, and debugging. |
+| [LLM configuration](docs/llm-configuration.md) | Configuring LLM providers, DataRobot gateway, deployments, and external APIs. |
+| [MCP server](docs/mcp-server.md) | MCP server architecture, custom tools, and deployment. |
+| [OAuth applications](docs/oauth-applications.md) | OAuth provider setup for external service authentication. |
+
+The agent documentation includes per-framework guides with tool integration and prompt modification examples:
+
+| Framework | Guide |
+|---|---|
+| LangGraph (default) | [docs/agent/frameworks/langgraph.md](docs/agent/frameworks/langgraph.md) |
+| CrewAI | [docs/agent/frameworks/crewai.md](docs/agent/frameworks/crewai.md) |
+| LlamaIndex | [docs/agent/frameworks/llamaindex.md](docs/agent/frameworks/llamaindex.md) |
+| NAT (NeMo Agent Toolkit) | [docs/agent/frameworks/nat.md](docs/agent/frameworks/nat.md) |
+| Base (generic) | [docs/agent/frameworks/base.md](docs/agent/frameworks/base.md) |
+
+See also: [AG-UI integration](docs/agent/ag-ui.md), [Agent-to-Agent (A2A)](docs/agent/agent2agent.md), [Debugging](docs/agent/debugging.md).
+
+## DataRobot documentation
+
+For additional guidance beyond what this template covers, see the official DataRobot documentation:
+
+- [Customize your agent](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-development.html)&mdash;modify agent logic, prompts, and behavior.
+- [Add tools to your agent](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-tools-integrate.html)&mdash;integrate MCP, custom, and global tools.
+- [Configure LLM providers](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-llm-providers.html)&mdash;set up DataRobot gateway, deployments, or external APIs.
+- [Add Python packages](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-python-packages.html)&mdash;manage dependencies via `uv` and custom Docker images.
+- [Manage prompts](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-development.html#modify-agent-prompts)&mdash;modify agent prompts per framework.
+- [Agent authentication](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-authentication.html)&mdash;API tokens, OAuth 2.0, and credential management.
+- [Deploy agentic tools](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-tools.html)&mdash;deploy global tools from the DataRobot Registry.
+- [DataRobot agentic skills](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-skills.html)&mdash;install modular skill packages for coding agents.
+- [Implement tracing](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-tracing-code.html)&mdash;add custom OpenTelemetry tracing for deployed agents.
+- [Troubleshooting](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-troubleshooting.html)&mdash;diagnose common setup, deployment, and runtime issues.
 
 # Deploy your agent
 
@@ -603,47 +635,7 @@ dr self version   # verify
    ```sh
    dr run install
    ```
-# Agent2Agent
 
-Template agents can expose themselves as agent-to-agent (A2A) servers and connect to remote agents via the agent-to-agent protocol.
-
-To expose an agent via A2A:
-
-- Templates must have a `general.front_end.a2a` configuration block. By default, templates already include this.
-- Run the agent with the experimental dragent front server: set `ENABLE_DRAGENT_SERVER=true` in your `.env` file.
-
-To connect an agent via A2A to a remote agent:
-
-- Uncomment the `function_groups` and `workflow.tool_names` blocks in the `workflow.yaml` file.
-- Run the agent with the experimental dragent front server: set `ENABLE_DRAGENT_SERVER=true` in your `.env` file.
-
-Enable the **ENABLE_RUNTIME_PARAMETERS_IMPROVEMENTS** feature flag in DataRobot to use environment variables in the `workflow.yaml` files.
-
-### Agent cards and DataRobot deployments
-
-When the `ENABLE_GENAI_AGENT_TO_AGENT_SUPPORT` feature flag is enabled and you deploy an agent that exposes A2A server endpoints, the agent card for that agent is stored in DataRobot during deployment. Use the following endpoints:
-
-- **List deployments with agent cards:** `GET deployments/?isA2AAgent=true`
-- **Retrieve an agent card:** `GET deployments/<deployment_id>/agentCard`
-
-
-## A2A agents hosted outside of DataRobot
-
-For A2A agents hosted outside of DataRobot:
-
-1. Create an external model with the "Agentic Workflow" target type and the default configuration.
-2. Deploy the external model.
-3. Push the agent card via `PUT deployments/<deployment_id>/agentCard`.
-
-For external deployments, you can also remove the agent card with `DELETE deployments/<deployment_id>/agentCard`.
-
-```python
-deployments = dr.Deployment.list(filters=DeploymentListFilters(is_a2a_agent=True))
-agent_card = deployment.get_agent_card()
-# Only available for external deployments
-deployment.upload_agent_card(agent_card)
-deployment.delete_agent_card()
-```
 
 # Get help
 

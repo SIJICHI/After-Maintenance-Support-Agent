@@ -187,7 +187,7 @@ class DataRobotAGUIAgent(AGUIAgent):
                         EventType.TEXT_MESSAGE_CONTENT,
                         EventType.THINKING_TEXT_MESSAGE_CONTENT,
                     ]:
-                        logger.info(f"Received event: {chunk.event}")
+                        logger.debug(f"Received event: {chunk.event}")
                     yield event
                     continue
 

@@ -8,6 +8,8 @@ The following command should be run after agent code modification:
 dr task run agent:install
 ```
 
+> **Warning:** When using a custom Docker context (`DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT` is unset and an `agent/docker_context/` folder is present), modifying `pyproject.toml` or `uv.lock` triggers a full execution environment rebuild on the next deployment. This rebuild can take **10–20 minutes** depending on the number of dependencies. When using the default DataRobot execution environment (the default configuration), dependency changes do not trigger a rebuild.
+
 ## Agent Structure
 
 Agent must be implemented in the following location withing the `agent/agent` directory. None of the other files outside of this directory are related.
@@ -143,3 +145,17 @@ Run the following shell command to validate the agent after deployment. If the r
 ```shell
 task agent:cli -- execute-deployment --user_prompt "Agent specific prompt to validate that it's working" --deployment_id <deployment_id>
 ```
+
+## Migrations
+
+### 11.8.8 — New agent format (class-based → factory-based)
+
+Starting with agent component version 11.8.8 ([af-component-agent#474](https://github.com/datarobot-community/af-component-agent/pull/474)), agent templates (except `base`) no longer require defining agents within a `MyAgent` class. Agents are now defined using native framework primitives at module level and converted to `MyAgent` via a helper function (`datarobot_agent_class_from_*`). The LLM is also decoupled from the agent class and injected via `get_llm()`.
+
+If you are upgrading an existing agent from a version prior to 11.8.8, follow the migration guide for your framework:
+
+- [LangGraph migration](../docs/agent/langgraph-migration-to-11.8.8.md)
+- [CrewAI migration](../docs/agent/crewai-migration-to-11.8.8.md)
+- [LlamaIndex migration](../docs/agent/llamaindex-migration-to-11.8.8.md)
+- [Base agent migration](../docs/agent/base-migration-to-11.8.8.md)
+- [NAT agent migration](../docs/agent/nat-migration-to-11.8.8.md)

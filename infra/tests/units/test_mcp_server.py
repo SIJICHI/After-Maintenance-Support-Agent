@@ -35,8 +35,6 @@ def pulumi_mocks(monkeypatch, tmp_path):
     mock_use_case = MagicMock()
     mock_use_case.id = "mock-use-case-id"
     mock_project_dir = tmp_path
-    mock_prediction_environment = MagicMock()
-    mock_prediction_environment.id = "mock-prediction-environment-id"
     monkeypatch.setattr("infra.use_case", mock_use_case)
     monkeypatch.setattr("infra.project_dir", mock_project_dir)
 
@@ -369,6 +367,44 @@ def test_reset_environment_between_tests():
     # Default behavior should be to create a new execution environment
     mcp_infra.pulumi_datarobot.ExecutionEnvironment.assert_called_once()
     mcp_infra.pulumi_datarobot.ExecutionEnvironment.get.assert_not_called()
+
+
+def test_prediction_environment_created_when_env_var_not_set(monkeypatch):
+    """Test that a new PredictionEnvironment is created when DATAROBOT_DEFAULT_PREDICTION_ENVIRONMENT is not set."""
+    monkeypatch.delenv("DATAROBOT_DEFAULT_PREDICTION_ENVIRONMENT", raising=False)
+
+    import importlib
+    import infra.mcp_server as mcp_infra
+
+    mcp_infra.pulumi_datarobot.PredictionEnvironment.reset_mock()
+    importlib.reload(mcp_infra)
+
+    mcp_infra.pulumi_datarobot.PredictionEnvironment.assert_called_once()
+    mcp_infra.pulumi_datarobot.PredictionEnvironment.get.assert_not_called()
+
+
+def test_prediction_environment_injected_when_env_var_set(monkeypatch):
+    """Test that an existing PredictionEnvironment is used when DATAROBOT_DEFAULT_PREDICTION_ENVIRONMENT is set."""
+    monkeypatch.setenv(
+        "DATAROBOT_DEFAULT_PREDICTION_ENVIRONMENT", "existing-pred-env-id"
+    )
+
+    import importlib
+    import infra.mcp_server as mcp_infra
+
+    mcp_infra.pulumi_datarobot.PredictionEnvironment.reset_mock()
+    mcp_infra.pulumi.info.reset_mock()
+    importlib.reload(mcp_infra)
+
+    mcp_infra.pulumi.info.assert_any_call(
+        "Using existing prediction environment 'existing-pred-env-id'"
+    )
+
+    mcp_infra.pulumi_datarobot.PredictionEnvironment.get.assert_called_once()
+    args, kwargs = mcp_infra.pulumi_datarobot.PredictionEnvironment.get.call_args
+    assert kwargs["id"] == "existing-pred-env-id"
+
+    mcp_infra.pulumi_datarobot.PredictionEnvironment.assert_not_called()
 
 
 def test_custom_model_created(monkeypatch):

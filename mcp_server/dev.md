@@ -5,23 +5,23 @@ This guide provides comprehensive instructions for setting up, developing, and d
 ## Table of contents
 
 - [Prerequisites](#prerequisites)
-- [Initial Setup](#initial-setup)
-- [Running the Server](#running-the-server)
-- [Development Workflow](#development-workflow)
-  - [MCP Client Configuration](#mcp-client-configuration)
-  - [OpenTelemetry Configuration](#opentelemetry-configuration)
-  - [Dynamic Tool Registration](#dynamic-tool-registration)
-  - [Dynamic Prompt Registration](#dynamic-prompt-registration)
-- [Code Quality](#code-quality)
+- [Initial setup](#initial-setup)
+- [Running the server](#running-the-server)
+- [Development workflow](#development-workflow)
+  - [MCP client configuration](#mcp-client-configuration)
+  - [OpenTelemetry configuration](#opentelemetry-configuration)
+  - [Dynamic tool registration](#dynamic-tool-registration)
+  - [Dynamic prompt registration](#dynamic-prompt-registration)
+- [Code quality](#code-quality)
 - [Testing](#testing)
 - [Debugging](#debugging)
 
 ## Prerequisites
 
-Before you begin, ensure you have the following:
+Before you begin, make sure you have the following:
 
 - **uv**: Python package installer and project manager
-- **DataRobot Account**: Active DataRobot account with API credentials
+- **DataRobot account**: An active DataRobot account with API credentials
 - **Python 3.11+**: Required Python version
 
 ## Initial setup
@@ -38,9 +38,9 @@ For alternative installation methods, refer to the [uv documentation](https://gi
 
 ### 2. Configure environment variables
 
-Create a `.env` file in the root directory. You can copy from `.env.template` located in the app directory.
+Create a `.env` file in the application directory. You can copy it from `.env.template` in the same directory.
 
-Then configure the following variables:
+Then set the following variables:
 
 #### Required variables
 
@@ -53,24 +53,24 @@ DATAROBOT_ENDPOINT=your_datarobot_endpoint
 #### Optional variables
 
 ```bash
-# MCP Server Configuration
+# MCP server configuration
 # MCP_SERVER_NAME=your_server_name
 # MCP_SERVER_PORT=8080
 # MCP_SERVER_LOG_LEVEL=DEBUG
 
-# Dynamic Tool Registration
+# Dynamic tool registration
 # MCP_SERVER_REGISTER_DYNAMIC_TOOLS_ON_STARTUP=true
 # MCP_SERVER_TOOL_REGISTRATION_ALLOW_EMPTY_SCHEMA=true
 # MCP_SERVER_TOOL_REGISTRATION_DUPLICATE_BEHAVIOR=warn
 
-# Dynamic Prompt Registration
+# Dynamic prompt registration
 # MCP_SERVER_REGISTER_DYNAMIC_PROMPTS_ON_STARTUP=true
 # MCP_SERVER_PROMPT_REGISTRATION_DUPLICATE_BEHAVIOR=warn
 
-# Application Configuration
+# Application configuration
 # APP_LOG_LEVEL=DEBUG
 
-# OpenTelemetry Configuration
+# OpenTelemetry configuration
 # OTEL_ENABLED=false
 # OTEL_ENABLED_HTTP_INSTRUMENTORS=true
 ```
@@ -79,18 +79,19 @@ DATAROBOT_ENDPOINT=your_datarobot_endpoint
 
 ### Local development
 
-To start the MCP server locally for development:
+To start the MCP server locally:
 
 ```bash
 task dev
 ```
 
-This command will:
-- Create a virtual environment (if needed)
-- Install all dependencies
-- Start the MCP server on the configured port (default: 8080)
+This command:
 
-### Deployment to DataRobot
+- Creates a virtual environment (if needed)
+- Installs all dependencies
+- Starts the MCP server on the configured port (default: 8080)
+
+### Deploy to DataRobot
 
 To deploy the MCP server to DataRobot:
 
@@ -104,7 +105,9 @@ This will build and deploy the server as a DataRobot custom model application.
 
 ### MCP client configuration
 
-To use the MCP server with AI assistants, configure your MCP client to connect to the server.
+To use the MCP server with AI assistants, configure your MCP client to connect to it.
+Replace placeholder values such as `YOUR_API_KEY` and `<deployment-id>` with your own values.
+The local examples below use the default port, `8080`.
 
 #### Cursor
 
@@ -127,7 +130,7 @@ Edit `~/.cursor/mcp.json`:
 }
 ```
 
-#### Visual Studio Code
+#### VS Code
 
 Edit `~/Library/Application Support/Code/User/mcp.json` (macOS) or `%APPDATA%\Code\User\mcp.json` (Windows):
 
@@ -144,9 +147,28 @@ Edit `~/Library/Application Support/Code/User/mcp.json` (macOS) or `%APPDATA%\Co
 }
 ```
 
+For a deployed server, use a configuration such as:
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "datarobot-mcp-server-remote": {
+        "url": "https://app.datarobot.com/deployments/<deployment-id>/directAccess/mcp/",
+        "type": "http",
+        "headers": {
+          "Authorization": "Bearer YOUR_API_KEY",
+          "x-datarobot-api-key": "YOUR_API_KEY"
+        }
+      }
+    }
+  }
+}
+```
+
 #### Claude Desktop
 
-1. Install Node.js (required for the MCP remote client):
+1. Install Node.js. Claude Desktop uses the `mcp-remote` proxy for HTTP-based MCP servers:
 
 ```bash
 brew install node
@@ -176,20 +198,20 @@ brew install node
 }
 ```
 
-For more detailed client setup instructions, see the [MCP Client Setup Guide](docs/mcp_client_setup.md).
+For more detailed client setup instructions, including local Claude Desktop examples, see the [MCP client setup guide](docs/mcp_client_setup.md).
 
 ### OpenTelemetry configuration
 
 The server supports OpenTelemetry for distributed tracing and observability.
 
-#### Features
+#### Key features
 
 - **Automatic HTTP Client Instrumentation**: Supports aiohttp, httpx, and requests
 - **Tool Execution Tracing**: Captures tool parameters and results
 - **Error Tracking**: Monitors errors and status
 - **Custom Attributes**: Support for custom tracing attributes
 
-#### Configuration
+#### OpenTelemetry settings
 
 Add the following environment variables to your `.env` file:
 
@@ -204,20 +226,20 @@ OTEL_ENABLED_HTTP_INSTRUMENTORS=false
 
 The server can automatically discover and register DataRobot deployments as MCP tools.
 
-When enabled, the server scans for deployments tagged with `tool` and registers each as an MCP tool automatically. This allows you to expose DataRobot models as tools without manual configuration.
+When enabled, the server scans for deployments tagged with `tool` and automatically registers each one as an MCP tool. This allows you to expose DataRobot models as tools without manual configuration.
 
-For detailed information about this feature, including supported workflows and prerequisites, refer to the [Dynamic Tool Registration Guide](docs/dynamic_tool_registration.md).
+For detailed information about this feature, including supported workflows and prerequisites, see the [Dynamic tool registration guide](docs/dynamic_tool_registration.md).
 
-#### Configuration
+#### Tool registration settings
 
 ```bash
-# Enable/disable Dynamic Tool Registration on startup (default: false)
+# Enable or disable dynamic tool registration on startup (default: false)
 MCP_SERVER_REGISTER_DYNAMIC_TOOLS_ON_STARTUP=true
 
 # Allow tools with empty schemas (default: false)
 MCP_SERVER_TOOL_REGISTRATION_ALLOW_EMPTY_SCHEMA=true
 
-# Behavior when duplicate tools are found: 'error', 'warn', or 'ignore' (default: 'warn')
+# How to handle duplicate tools: 'error', 'warn', or 'ignore' (default: 'warn')
 MCP_SERVER_TOOL_REGISTRATION_DUPLICATE_BEHAVIOR=warn
 ```
 
@@ -225,13 +247,13 @@ MCP_SERVER_TOOL_REGISTRATION_DUPLICATE_BEHAVIOR=warn
 
 The server can automatically discover and register DataRobot prompts as MCP prompts.
 
-#### Configuration
+#### Prompt registration settings
 
 ```bash
-# Enable/disable Dynamic Prompt Registration on startup (default: false)
+# Enable or disable dynamic prompt registration on startup (default: false)
 MCP_SERVER_REGISTER_DYNAMIC_PROMPTS_ON_STARTUP=true
 
-# Behavior when duplicate prompts are found: 'error', 'warn', or 'ignore' (default: 'warn')
+# How to handle duplicate prompts: 'error', 'warn', or 'ignore' (default: 'warn')
 MCP_SERVER_PROMPT_REGISTRATION_DUPLICATE_BEHAVIOR=warn
 ```
 
@@ -245,6 +267,7 @@ uv sync --all-extras && uv run ruff check --select I --fix && uv run ruff format
 ```
 
 This command will:
+
 - Install all dependencies including development extras
 - Check import sorting and fix issues
 - Format code according to project standards
@@ -258,14 +281,14 @@ Run the test suite:
 uv sync --all-extras && uv run pytest
 ```
 
-For more testing options, see the project's test documentation or run:
+For more testing options, run:
 
 ```bash
 # Run tests with coverage
 uv run pytest --cov
 
-# Run specific test file
-uv run pytest tests/unit/test_user_tools.py
+# Run a specific test file
+uv run pytest app/tests/integration/test_user_tools.py
 
 # Run tests with verbose output
 uv run pytest -v
@@ -277,15 +300,15 @@ uv run pytest -v
 
 Monitor the MCP server logs to debug issues:
 
-- **Local Development**: Logs are output to the console where you ran `task dev`
-- **Deployed Server**: Check the DataRobot deployment logs in the DataRobot UI
+- **Local development**: Logs are output to the console where you ran `task dev`
+- **Deployed server**: Check the DataRobot deployment logs in the DataRobot UI
 
 ### Common issues
 
-1. **Connection Errors**: Verify the server is running and the URL is correct
-2. **Authentication Failures**: Check that your `DATAROBOT_API_TOKEN` is valid
-3. **Tool Registration Issues**: Review the server logs for registration errors
-4. **Port Conflicts**: Ensure the configured port (default: 8080) is available
+1. **Connection errors**: Verify that the server is running and the URL is correct.
+2. **Authentication failures**: Check that your `DATAROBOT_API_TOKEN` is valid.
+3. **Tool registration issues**: Review the server logs for registration errors.
+4. **Port conflicts**: Make sure the configured port (default: 8080) is available.
 
 ### Debug mode
 

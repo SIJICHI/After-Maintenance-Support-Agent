@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import datetime, timezone
 from typing import AsyncGenerator, NamedTuple
 
 import pytest
@@ -597,3 +598,58 @@ async def test_parameterized(
             assert actual_reasonings == set(expected_message.reasonings), (
                 f"Context: {expected_chat.thread_id}-{expected_message.agui_id}. {actual_reasonings}=={set(expected_message.reasonings)}"
             )
+
+
+async def test_created_at_uses_event_timestamp(
+    storage_agent: AGUIAgentWithStorage,
+    stub_agent: StubAgent,
+    chat_repo: ChatRepository,
+    message_repo: MessageRepository,
+    user: User,
+) -> None:
+    # using clean 1k to not have any floating point funny business
+    run_started_ts = 1000
+    message_ts = 2000
+    tool_call_ts = 3000
+    reasoning_ts = 4000
+    run_finished_ts = 5000
+
+    stub_agent.set_events(
+        RunStartedEvent(thread_id="t-ts", run_id="r1", timestamp=run_started_ts),
+        TextMessageStartEvent(message_id="m2", timestamp=message_ts),
+        TextMessageContentEvent(message_id="m2", delta="hello", timestamp=message_ts),
+        TextMessageEndEvent(message_id="m2", timestamp=message_ts),
+        ToolCallStartEvent(
+            parent_message_id="m2",
+            tool_call_id="tc1",
+            tool_call_name="tool",
+            timestamp=tool_call_ts,
+        ),
+        ToolCallArgsEvent(tool_call_id="tc1", delta="{}", timestamp=tool_call_ts),
+        ToolCallEndEvent(tool_call_id="tc1", timestamp=tool_call_ts),
+        ThinkingStartEvent(title="Thinking", timestamp=reasoning_ts),
+        ThinkingTextMessageStartEvent(timestamp=reasoning_ts),
+        ThinkingTextMessageContentEvent(delta="reason", timestamp=reasoning_ts),
+        ThinkingTextMessageEndEvent(timestamp=reasoning_ts),
+        ThinkingEndEvent(timestamp=reasoning_ts),
+        RunFinishedEvent(thread_id="t-ts", run_id="r1", timestamp=run_finished_ts),
+    )
+
+    await run(storage_agent, "t-ts", UserMessage(id="m1", content="Hi", name="u1"))
+
+    chat = await chat_repo.get_chat_by_thread_id(user.uuid, "t-ts")
+    assert chat is not None
+
+    def as_utc_epoch_milli_seconds(dt: datetime) -> int:
+        normalized_dt = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+        return int(normalized_dt.timestamp() * 1_000)
+
+    message = await message_repo.get_message_by_agui_id(chat.uuid, "m2")
+    assert message is not None
+    assert as_utc_epoch_milli_seconds(message.created_at) == message_ts
+
+    tool_call = next(tc for tc in message.tool_calls if tc.tool_call_id == "tc1")
+    assert as_utc_epoch_milli_seconds(tool_call.created_at) == tool_call_ts
+
+    assert message.reasonings
+    assert as_utc_epoch_milli_seconds(message.reasonings[0].created_at) == reasoning_ts

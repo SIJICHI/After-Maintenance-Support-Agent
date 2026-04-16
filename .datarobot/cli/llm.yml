@@ -9,7 +9,7 @@ root:
 
       - For the simplest setup, select DataRobot's "LLM Gateway".
 
-      - If you already have a custom model deployed LLM and a deployment ID, select "DataRobot Deployed LLM".
+      - If you already have a custom model deployed LLM and a deployment ID, select "DataRobot Deployed LLM" (this sets USE_DATAROBOT_LLM_GATEWAY=0 automatically).
 
       - If you want to use your LLM provider credentials instead of the LLM gateway (e.g. Azure OpenAI,
 
@@ -33,9 +33,6 @@ root:
       - name: "External LLM"
         value: "blueprint_with_external_llm.py"
         requires: external_llm
-      - name: "LLM Gateway with External Model"
-        value: "blueprint_with_llm_gateway.py"
-        requires: llm_gateway
 
 llm_gateway:
   - env: LLM_DEFAULT_MODEL
@@ -44,10 +41,14 @@ llm_gateway:
     help: "Choose an LLM from the DataRobot LLM Gateway catalog to use for your LLM Blueprint."
 
 deployed_llm:
-  - env: TEXTGEN_DEPLOYMENT_ID
+  - env: LLM_DEPLOYMENT_ID
     type: string
     optional: false
     help: "Enter the deployment ID of the DataRobot custom model deployed LLM (e.g., 6510c7b7c4f3f9407e24a849)."
+  - env: USE_DATAROBOT_LLM_GATEWAY
+    type: string
+    default: "0"
+    hidden: true
 
 external_llm:
   - env: LLM_DEFAULT_MODEL

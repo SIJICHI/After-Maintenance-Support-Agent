@@ -100,7 +100,7 @@ def pulumi_mocks(monkeypatch, tmp_path):
     from datarobot.enums import EXECUTION_ENVIRONMENT_VERSION_BUILD_STATUS
 
     _default_ee_version = MagicMock()
-    _default_ee_version.id = "69b92f2cb83bd6076dfbfbb4"
+    _default_ee_version.id = "69d773b9881f02076d40b5e2"
     _default_ee_version.build_status = (
         EXECUTION_ENVIRONMENT_VERSION_BUILD_STATUS.SUCCESS
     )
@@ -257,7 +257,7 @@ def test_execution_environment_pinned_set(monkeypatch):
     )
     monkeypatch.setenv(
         "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID",
-        "69b92f2cb83bd6076dfbfbb4",
+        "69d773b9881f02076d40b5e2",
     )
 
     import importlib
@@ -270,7 +270,7 @@ def test_execution_environment_pinned_set(monkeypatch):
         "Using default GenAI Agentic Execution Environment."
     )
     agent_infra.pulumi.info.assert_any_call(
-        "Using existing execution environment: python-311-genai-agents-id Version ID: 69b92f2cb83bd6076dfbfbb4"
+        "Using existing execution environment: python-311-genai-agents-id Version ID: 69d773b9881f02076d40b5e2"
     )
 
     # Check that ExecutionEnvironment.get was called with the correct parameters
@@ -278,7 +278,7 @@ def test_execution_environment_pinned_set(monkeypatch):
     args, kwargs = agent_infra.pulumi_datarobot.ExecutionEnvironment.get.call_args
 
     assert kwargs["id"] == "python-311-genai-agents-id"
-    assert kwargs["version_id"] == "69b92f2cb83bd6076dfbfbb4"
+    assert kwargs["version_id"] == "69d773b9881f02076d40b5e2"
     assert kwargs["resource_name"] == "[unittest] [agent] Execution Environment"
 
     # ExecutionEnvironment constructor should not be called when using default env
@@ -464,8 +464,8 @@ def test_custom_model_created(monkeypatch):
 
     runtime_parameter_values = kwargs["runtime_parameter_values"]
 
-    # Should have 5 params: 1 SESSION_SECRET_KEY + 4 DRUM params
-    assert len(runtime_parameter_values) == 5
+    # Should have 6 params: 1 SESSION_SECRET_KEY + 5 DRUM params
+    assert len(runtime_parameter_values) == 6
 
     # Find the SESSION_SECRET_KEY parameter
     session_secret_param = next(
@@ -480,13 +480,13 @@ def test_custom_model_created_pinned_version_id(monkeypatch):
     """Test that pulumi_datarobot.CustomModel is created with correct arguments."""
     monkeypatch.delenv("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", raising=False)
     monkeypatch.setenv(
-        "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID", "69b92f2cb83bd6076dfbfbb4"
+        "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID", "69d773b9881f02076d40b5e2"
     )
     monkeypatch.setattr(
         "pulumi_datarobot.ExecutionEnvironment",
         MagicMock(
             return_value=MagicMock(
-                id="default-id", version_id="69b92f2cb83bd6076dfbfbb4"
+                id="default-id", version_id="69d773b9881f02076d40b5e2"
             )
         ),
     )
@@ -506,7 +506,7 @@ def test_custom_model_created_pinned_version_id(monkeypatch):
     agent_infra.pulumi_datarobot.CustomModel.assert_called_once()
     args, kwargs = agent_infra.pulumi_datarobot.CustomModel.call_args
     assert kwargs["base_environment_id"] == "default-id"
-    assert kwargs["base_environment_version_id"] == "69b92f2cb83bd6076dfbfbb4"
+    assert kwargs["base_environment_version_id"] == "69d773b9881f02076d40b5e2"
 
 
 def test_custom_model_resource_bundle_and_replicas(monkeypatch):
@@ -588,17 +588,44 @@ def test_agent_deployment_created_when_env(monkeypatch):
     import infra.agent as agent_infra
 
     # Reset mocks to clear calls from the initial import
+    agent_infra.pulumi_datarobot.PredictionEnvironment.reset_mock()
     agent_infra.pulumi_datarobot.DeploymentAssociationIdSettingsArgs.reset_mock()
     agent_infra.pulumi_datarobot.DeploymentPredictionsDataCollectionSettingsArgs.reset_mock()
     agent_infra.CustomModelDeployment.reset_mock()
     importlib.reload(agent_infra)
 
+    # Check that PredictionEnvironment was created
+    agent_infra.pulumi_datarobot.PredictionEnvironment.assert_called_once()
     # Check that CustomModelDeployment was created
     agent_infra.CustomModelDeployment.assert_called_once()
     agent_infra.pulumi.export.assert_any_call(
         "Agent Deployment Chat Endpoint " + agent_infra.agent_asset_name,
         agent_infra.CustomModelDeployment.return_value.id.apply.return_value,
     )
+
+
+def test_agent_deployment_uses_existing_prediction_environment(monkeypatch):
+    """Test that an existing prediction environment is used when DATAROBOT_DEFAULT_PREDICTION_ENVIRONMENT is set."""
+    monkeypatch.setenv("AGENT_DEPLOY", "1")
+    monkeypatch.setenv("DATAROBOT_DEFAULT_PREDICTION_ENVIRONMENT", "existing-pe-id")
+    monkeypatch.delenv("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", raising=False)
+
+    import importlib
+    import infra.agent as agent_infra
+
+    # Reset mocks to clear calls from the initial import
+    agent_infra.pulumi_datarobot.PredictionEnvironment.reset_mock()
+    agent_infra.CustomModelDeployment.reset_mock()
+    importlib.reload(agent_infra)
+
+    # Check that PredictionEnvironment.get() was called with the existing ID
+    agent_infra.pulumi_datarobot.PredictionEnvironment.get.assert_called_once()
+    _, call_kwargs = agent_infra.pulumi_datarobot.PredictionEnvironment.get.call_args
+    assert call_kwargs.get("id") == "existing-pe-id"
+    # Check that PredictionEnvironment constructor was not called
+    agent_infra.pulumi_datarobot.PredictionEnvironment.assert_not_called()
+    # Check that CustomModelDeployment was still created
+    agent_infra.CustomModelDeployment.assert_called_once()
 
 
 def test_agent_deployment_not_created_when_env_zero(monkeypatch):
@@ -610,10 +637,12 @@ def test_agent_deployment_not_created_when_env_zero(monkeypatch):
     import infra.agent as agent_infra
 
     # Reset mocks to clear calls from the initial import
+    agent_infra.pulumi_datarobot.PredictionEnvironment.reset_mock()
     agent_infra.CustomModelDeployment.reset_mock()
     importlib.reload(agent_infra)
 
-    # Check that CustomModelDeployment was not called
+    # Check that PredictionEnvironment and CustomModelDeployment were not called
+    agent_infra.pulumi_datarobot.PredictionEnvironment.assert_not_called()
     agent_infra.CustomModelDeployment.assert_not_called()
 
 
@@ -1283,11 +1312,12 @@ class TestDrumRuntimeParameters:
                 "DRUM_SERVER_TYPE",
                 "DRUM_GUNICORN_WORKER_CLASS",
                 "DRUM_WORKER_CONNECTIONS",
+                "DRUM_CLIENT_REQUEST_TIMEOUT",
             ]
         }
 
-        # Verify all 4 DRUM parameters are present
-        assert len(drum_params) == 4
+        # Verify all 5 DRUM parameters are present
+        assert len(drum_params) == 5
 
         # Check CUSTOM_MODEL_WORKERS
         assert drum_params["CUSTOM_MODEL_WORKERS"].type == "numeric"
@@ -1304,6 +1334,10 @@ class TestDrumRuntimeParameters:
         # Check DRUM_WORKER_CONNECTIONS
         assert drum_params["DRUM_WORKER_CONNECTIONS"].type == "numeric"
         assert drum_params["DRUM_WORKER_CONNECTIONS"].value == "1"
+
+        # Check DRUM_CLIENT_REQUEST_TIMEOUT
+        assert drum_params["DRUM_CLIENT_REQUEST_TIMEOUT"].type == "numeric"
+        assert drum_params["DRUM_CLIENT_REQUEST_TIMEOUT"].value == "300"
 
     def test_drum_runtime_parameters_passed_to_custom_model(self, monkeypatch):
         """Test that DRUM runtime parameters are passed to CustomModel."""
@@ -1324,6 +1358,7 @@ class TestDrumRuntimeParameters:
             "DRUM_SERVER_TYPE",
             "DRUM_GUNICORN_WORKER_CLASS",
             "DRUM_WORKER_CONNECTIONS",
+            "DRUM_CLIENT_REQUEST_TIMEOUT",
         ]
 
         found_keys = [param.key for param in runtime_params if param.key in drum_keys]

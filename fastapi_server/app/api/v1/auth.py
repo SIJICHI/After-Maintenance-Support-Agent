@@ -14,7 +14,7 @@
 import logging
 import uuid
 
-from datarobot.auth.exceptions import OAuthValidationErr
+from datarobot.auth.exceptions import OAuthProviderNotFound, OAuthValidationErr
 from datarobot.auth.oauth import (
     OAuthData,
     OAuthProvider,
@@ -151,10 +151,19 @@ async def oauth_login(
     if redirect_uri:
         real_redirect = redirect_uri
 
-    oauth_sess = await auth.get_authorization_url(
-        provider_id=provider_id,
-        redirect_uri=real_redirect,
-    )
+    try:
+        oauth_sess = await auth.get_authorization_url(
+            provider_id=provider_id,
+            redirect_uri=real_redirect,
+        )
+    except OAuthProviderNotFound:
+        err = ErrorSchema(
+            code=ErrorCodes.RESOURCE_NOT_FOUND,
+            message=f"OAuth provider '{provider_id}' not found",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=err.model_dump()
+        )
 
     # APP-4401. Resolve after this is fixed in the DataRobot oauth-providers-service
     oauth_sess.authorization_url = oauth_sess.authorization_url.replace(

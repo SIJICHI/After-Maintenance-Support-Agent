@@ -265,6 +265,10 @@ class OTel:
             return
 
         try:
+            # Ensure tracer provider/exporter is configured before instrumenting FastAPI
+            if self.telemetry_enabled and not self._tracer_provider:
+                self.configure_tracing()
+
             FastAPIInstrumentor.instrument_app(app)
             logging.getLogger(__name__).info(
                 "Auto-instrumentation enabled for FastAPI application"

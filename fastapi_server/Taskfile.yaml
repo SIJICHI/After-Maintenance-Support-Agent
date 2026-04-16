@@ -71,6 +71,46 @@ tasks:
       - cd ../frontend_web && task build
       - "{{.UV_CMD}} run pytest --disable-warnings -s --cov --cov-report=html --cov-report=term --cov-report xml:.coverage.xml"
 
+  test-oauth:
+    desc: "🔐 Run OAuth integration tests"
+    vars:
+      COMPOSE_FILE: tests/integration/oauth/docker-compose.yml
+    cmds:
+      - echo "🔐 Starting mock OAuth2 server..."
+      - docker compose -f {{.COMPOSE_FILE}} up -d
+      - defer: docker compose -f {{.COMPOSE_FILE}} down
+      - echo "⏳ Waiting for server to be ready..."
+      - |
+        for i in $(seq 1 30); do
+          if curl -sf http://localhost:18881/google/.well-known/openid-configuration > /dev/null 2>&1; then
+            echo "✓ Mock OAuth2 server is ready"
+            break
+          fi
+          sleep 1
+        done
+      - echo "🧪 Running OAuth integration tests..."
+      - "{{.UV_CMD}} run pytest tests/integration/oauth/ -v"
+
+  test-oauth:server:start:
+    desc: "🚀 Start mock OAuth2 server"
+    cmds:
+      - docker compose -f tests/integration/oauth/docker-compose.yml up -d
+      - |
+        for i in $(seq 1 30); do
+          if curl -sf http://localhost:18881/google/.well-known/openid-configuration > /dev/null 2>&1; then
+            echo "✓ Mock OAuth2 server started on http://localhost:18881"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "⚠ Server may still be starting..."
+
+  test-oauth:server:stop:
+    desc: "🛑 Stop mock OAuth2 server"
+    cmds:
+      - docker compose -f tests/integration/oauth/docker-compose.yml down
+      - echo "✓ Mock OAuth2 server stopped"
+
   copyright:
     aliases:
       - license

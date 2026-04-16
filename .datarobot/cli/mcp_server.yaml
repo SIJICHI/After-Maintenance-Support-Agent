@@ -5,6 +5,13 @@ root:
     default: "9000"
     optional: true
     help: "The local port to access the MCP Server. Should have a unique port."
+  - env: SESSION_SECRET_KEY
+    type: secret_string
+    generate: true
+    optional: false
+    help: |
+      Enter a secret key used to sign session cookies. This should be a long, random string.
+      The default value is randomly generated if the secret key is not already configured.
   - env: DATAROBOT_DEFAULT_MCP_EXECUTION_ENVIRONMENT
     type: string
     default: "[DataRobot] Python 3.11 GenAI Agents"
@@ -12,7 +19,7 @@ root:
     help: "Enter the default execution environment for the MCP server."
   - env: DATAROBOT_DEFAULT_MCP_EXECUTION_ENVIRONMENT_VERSION_ID
     type: string
-    default: "69b3e80b0cc7f2df95d75cea"
+    default: "69d60611798486a3db734045"
     optional: true
     help: "Enter the default execution environment version ID for the MCP server."
   - key: enabled_tools

@@ -24,6 +24,7 @@ class ErrorCodes(str, Enum):
     NOT_AUTHORIZED = "auth:not_authorized"
     IDENTITY_NOT_FOUND = "identity:not_found"
     DATAROBOT_USER_ERROR = "identity:datarobot_user_error"
+    RESOURCE_NOT_FOUND = "resource:not_found"
 
 
 class ErrorSchema(BaseModel):

@@ -613,7 +613,6 @@ mcp_custom_model_runtime_parameters: list[
     )
 ]
 
-
 if is_lineage_feature_enabled():
     mcp_tool_metadata_pulumi_manager = MCPToolMetadataPulumiManager()
     mcp_tool_metadata_entities = mcp_tool_metadata_pulumi_manager.load_metadata()

@@ -13,12 +13,14 @@
 # limitations under the License.
 import logging
 from enum import Enum
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from datarobot.auth.authlib.oauth import AsyncOAuth as AuthlibOAuth
 from datarobot.auth.authlib.oauth import OAuthProviderConfig
 from datarobot.auth.datarobot.oauth import AsyncOAuth as DatarobotOAuth
 from datarobot.auth.oauth import AsyncOAuthComponent
+from pydantic_settings import BaseSettings
 
 from app.users.auth import box_user_info_mapper
 from app.users.identity import ProviderType
@@ -45,6 +47,38 @@ class OAuthImpl(str, Enum):
         return [impl.value for impl in OAuthImpl]
 
 
+class OAuthServerURLs(BaseSettings):
+    """
+    OAuth server URLs configuration.
+
+    The default values are set to the well-known endpoints for Google and Microsoft,
+    and the standard endpoints for Box. Config is used to allow overriding these values
+    for better testability and flexibility, but in most cases, the defaults should work without
+    modification.
+    """
+
+    # Google
+    google_server_metadata_url: str = (
+        "https://accounts.google.com/.well-known/openid-configuration"
+    )
+
+    # Box
+    box_authorize_url: str = "https://account.box.com/api/oauth2/authorize"
+    box_access_token_url: str = "https://api.box.com/oauth2/token"
+    box_userinfo_endpoint: str = "https://api.box.com/2.0/users/me"
+
+    # Microsoft
+    microsoft_server_metadata_url: str = (
+        "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration"
+    )
+
+
+@lru_cache
+def get_oauth_server_urls() -> OAuthServerURLs:
+    """Get cached OAuth server URLs configuration."""
+    return OAuthServerURLs()
+
+
 def get_oauth(config: "Config") -> AsyncOAuthComponent:
     if config.oauth_impl == OAuthImpl.DATAROBOT:
         if not config.datarobot_oauth_providers:
@@ -61,6 +95,7 @@ def get_oauth(config: "Config") -> AsyncOAuthComponent:
 
     if config.oauth_impl == OAuthImpl.AUTHLIB:
         provider_configs: list[OAuthProviderConfig] = []
+        urls = get_oauth_server_urls()
 
         if config.google_client_id and config.google_client_secret:
             provider_configs.append(
@@ -69,7 +104,7 @@ def get_oauth(config: "Config") -> AsyncOAuthComponent:
                     client_id=config.google_client_id,
                     client_secret=config.google_client_secret,
                     scope="openid email profile https://www.googleapis.com/auth/drive.readonly",
-                    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+                    server_metadata_url=urls.google_server_metadata_url,
                     authorize_params={
                         "access_type": "offline",
                         "prompt": "consent",  # TODO: can we remove the prompt param here?
@@ -84,9 +119,9 @@ def get_oauth(config: "Config") -> AsyncOAuthComponent:
                     client_id=config.box_client_id,
                     client_secret=config.box_client_secret,
                     scope="root_readwrite",
-                    authorize_url="https://account.box.com/api/oauth2/authorize",
-                    access_token_url="https://api.box.com/oauth2/token",
-                    userinfo_endpoint="https://api.box.com/2.0/users/me",
+                    authorize_url=urls.box_authorize_url,
+                    access_token_url=urls.box_access_token_url,
+                    userinfo_endpoint=urls.box_userinfo_endpoint,
                     userinfo_mapper=box_user_info_mapper,
                 )
             )
@@ -97,10 +132,8 @@ def get_oauth(config: "Config") -> AsyncOAuthComponent:
                     id=ProviderType.MICROSOFT.value,
                     client_id=config.microsoft_client_id,
                     client_secret=config.microsoft_client_secret,
-                    scope="https://graph.microsoft.com/Files.ReadWrite.All offline_access",
-                    authorize_url="https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
-                    access_token_url="https://login.microsoftonline.com/common/oauth2/v2.0/token",
-                    userinfo_endpoint="https://graph.microsoft.com/v1.0/me",
+                    scope="openid email profile https://graph.microsoft.com/Files.ReadWrite.All offline_access",
+                    server_metadata_url=urls.microsoft_server_metadata_url,
                 )
             )
 

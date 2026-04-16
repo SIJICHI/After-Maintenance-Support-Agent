@@ -4,7 +4,7 @@ This template supports multiple LLM options, including:
 
 - LLM Gateway (default)
 - An already deployed text generation model in DataRobot
-- LLM Blueprint with an External LLM provider
+- External LLM
 
 ## Recommended option
 
@@ -42,9 +42,13 @@ INFRA_ENABLE_LLM=gateway_direct.py
 Uncomment and configure these in your `.env` file:
 
 ```sh
-TEXTGEN_DEPLOYMENT_ID=<your_deployment_id>
+LLM_DEPLOYMENT_ID=<your_deployment_id>
 INFRA_ENABLE_LLM=deployed_llm.py
 ```
+
+When you select **DataRobot Deployed LLM** during `dr start` (or `dr dotenv setup`), the template sets `USE_DATAROBOT_LLM_GATEWAY=0` automatically so the agent calls your deployment directly instead of routing through the LLM Gateway. You do not need to set `USE_DATAROBOT_LLM_GATEWAY` manually for this option.
+
+The environment variable for the deployment ID was formerly named `TEXTGEN_DEPLOYMENT_ID`; use `LLM_DEPLOYMENT_ID` now.
 
 ### External LLM provider
 

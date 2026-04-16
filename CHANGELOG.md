@@ -5,7 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 11.8.1
+- Bumped `agent` component from 11.7.13 to 11.8.8:
+  - *Breaking changes*: agent templates (except `base`) no longer require to define agents within class `MyAgent`. They are now converted from their native framework primitives to `MyAgent` with a helper function. Documentation includes a migration guide.
+  - Decoupled agent and MCP adaptor.
+  - Decoupled agent and LLM.
+    - Unified and tested all LLM options: DataRobot LLM Gateway, DataRobot Deployed LLM, DataRobot Deployed NIM, External LLM
+  - Added `DRUM_CLIENT_REQUEST_TIMEOUT` runtime parameter.
+  - Upgrade libraries to fix CVEs.
+  - Bumped moderations library for asyncio fix.
+- Bumped `mcp` component from 0.0.20 to 0.0.26:
+  - Upgraded `datarobot-genai` to >=0.13.0 (fastmcp 3.2.0).
+  - Updated default execution environment version.
+  - Added `SESSION_SECRET_KEY` configuration for session cookie signing.
+  - Refreshed MCP documentation.
+  - Add AGENTS.md file with MCP server instructions
+- Updated component `llm` from 11.4.17 to 11.4.18
+  - Fixed deployed LLM configuration: exported `USE_DATAROBOT_LLM_GATEWAY=0` to prevent gateway routing when using a deployed model
+  - Renamed `TEXTGEN_DEPLOYMENT_ID` to `LLM_DEPLOYMENT_ID` for consistent naming
+- Fixed tracing setup so traces are configured and visible in the DataRobot app traces
+- Improved performance of application tool call processing.
+- Added AGENTS.md instructions for mcp server & improved instructions for frontend
+- Fixed Microsoft OAuth authlib configuration by moving to OIDC discovery (server_metadata_url) and adding missing openid email profile scopes required for reliable user identity retrieval.
+- Added environment variable overrides for OAuth endpoint URLs and expanded OAuth integration test coverage.
+- Updated triggers for frontend rebuild on deploy: now executed only when files change to not redeploy application every time
+- Added warnings about long deployment time for agents with custom docker context
 
 ## 11.8.0
 - Updated `AGENTS.md` file with the frontend & fastapi server instructions

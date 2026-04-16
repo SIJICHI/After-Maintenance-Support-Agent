@@ -15,17 +15,14 @@ from nat.data_models.agent import AgentBaseConfig
 
 from agent.register import LanggraphAgentConfig, langgraph_agent
 
-config_cls = LanggraphAgentConfig
-register_fn = langgraph_agent
-
 
 class TestRegisterModule:
     """Tests that the NAT register module loads correctly and has the expected structure."""
 
     def test_config_class_is_agent_base_config(self):
         """Verify the config class is a subclass of AgentBaseConfig."""
-        assert issubclass(config_cls, AgentBaseConfig)
+        assert issubclass(LanggraphAgentConfig, AgentBaseConfig)
 
     def test_registered_function_is_callable(self):
         """Verify the registered function exists and is callable."""
-        assert callable(register_fn)
+        assert callable(langgraph_agent)

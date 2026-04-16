@@ -5,18 +5,13 @@ description = "Implementation of agent"
 readme = "README.md"
 requires-python = ">=3.11, <3.14"
 dependencies = [
-    "datarobot-genai[langgraph, dragent]==0.8.8",
-    "datarobot-moderations==11.2.20",
+    "datarobot-genai[langgraph, dragent]==0.14.4",
+    "datarobot-moderations[all]==11.2.24",
     "datarobot-drum==1.17.11.post1",  # Lift upper limit after asyncio migration finished
     "datarobot-mlops==11.1.0",
-    "openai>=1.81.0,<2.0.0",
-    "litellm>=1.72.1,<2.0.0,!=1.82.7,!=1.82.8",
     "langchain-litellm>=0.2.3",
     "opentelemetry-api>=1.33.0,<2.0.0",
     "opentelemetry-sdk>=1.33.0,<2.0.0",
-    "pdfminer.six>=20251230",  # CVE fix
-    "langgraph-checkpoint>=3.0.0", # CVE fix
-    "nltk>=3.9.3", # CVE fix
     "anyio>=4.11.0,<4.12.0", # Fix: ImportError: `set_current_async_library`
     "packaging>=25.0,<26.0",
 ]
@@ -97,7 +92,7 @@ target-version = "py311"
 # Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
 # McCabe complexity (`C901`) by default.
 select = ["E4", "E7", "E9", "F", "I"]
-ignore = []
+ignore = ["PLC0415"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
@@ -179,21 +174,41 @@ follow_imports = "skip"
 [tool.uv]
 required-version = ">=0.7.0"
 override-dependencies = [
+    # Compatibility
     "fastapi>=0.118.2,<0.133.0",  # 0.132 is the last version compatiable with NAT 1.4.1
-    "ragas>=0.3.8",
     "starlette>=0.49.1,<1.0.0",  # 0.52.1 is the last version compatiable with NAT 1.4.1
     "pyarrow==21.0.0",
-    # There is an incompatiblity between the opentelemetry-semantic-conventions-ai==0.4.14
-    # and crewai==1.9.3. See BUZZOK-29568 for more info.
-    "opentelemetry-semantic-conventions-ai==0.4.13",
+    # crewai and drum pin otel to 1.34.x but datarobot-moderations needs 0.60b1
+    # instrumentation which requires otel 1.39.x. Override the entire otel family
+    # to stay version-synchronized at 1.39.x / 0.60b1.
+    "opentelemetry-api>=1.39.0,<2.0.0",
+    "opentelemetry-sdk>=1.39.0,<2.0.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.39.0,<2.0.0",
+    "opentelemetry-exporter-otlp-proto-common>=1.39.0,<2.0.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.39.0,<2.0.0",
     # nvidia-nat-crewai==1.4.1 pins crewai<1.0.0 but datarobot-genai requires crewai>=1.1.0.
     # Override until nvidia-nat-crewai ships a fix upstream (BUZZOK-29844).
     # Upstream issue: https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues/1802
-    "crewai[litellm]>=1.1.0,<2.0.0",
-    "litellm>=1.72.1,<2.0.0,!=1.82.7,!=1.82.8",
+    "crewai[litellm]>=1.11.0,<2.0.0",
+
+    # Unlock latest langgraph
+    "langgraph>=1.1.0,<2.0.0",
+    "langgraph-prebuilt>=1.0.0,<2.0.0",
+
+    # CVE fixes
+    "litellm>=1.83.0,<2.0.0",
+    "nltk>=3.9.3",
+    "pdfminer.six>=20251230",
+    "langgraph-checkpoint>=3.0.0",
+    "ragas>=0.4.3",
+
+    # Excluded
     "gevent; sys_platform == 'never'",  # not used; therefore removed
     "onnxruntime; sys_platform == 'never'",  # not used; therefore removed
     "fastembed; sys_platform == 'never'",  # not used; therefore removed
+    "langchain-milvus; sys_platform == 'never'",  # not used and having CVEs
+    "pymilvus; sys_platform == 'never'",  # not used and having CVEs
+    "diskcache; sys_platform == 'never'",  # not used and having CVEs
 ]
 package = true
 environments = [
