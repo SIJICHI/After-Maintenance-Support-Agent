@@ -217,7 +217,7 @@ class AGUIAgentWithStorage(AGUIAgent):
 
         try:
             async for event in self._inner.run(input):
-                logger.info("Queuing event for storage %s", event)
+                logger.debug("Queuing event for storage %s", event)
 
                 # We're making sure the timestamp is set as we want to use it for `created_at` on messages
                 # This addresses a possible edge case of new user messages being sent while agent is responding

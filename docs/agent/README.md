@@ -247,11 +247,11 @@ Migration guides per framework:
 
 | Framework | Migration guide |
 |---|---|
-| LangGraph | [langgraph-migration-to-11.8.8.md](./langgraph-migration-to-11.8.8.md) |
-| CrewAI | [crewai-migration-to-11.8.8.md](./crewai-migration-to-11.8.8.md) |
-| LlamaIndex | [llamaindex-migration-to-11.8.8.md](./llamaindex-migration-to-11.8.8.md) |
-| Base | [base-migration-to-11.8.8.md](./base-migration-to-11.8.8.md) |
-| NAT | [nat-migration-to-11.8.8.md](./nat-migration-to-11.8.8.md) |
+| LangGraph | [migration-to-11.8.8-langgraph.md](./frameworks/migration-to-11.8.8-langgraph.md) |
+| CrewAI | [migration-to-11.8.8-crewai.md](./frameworks/migration-to-11.8.8-crewai.md) |
+| LlamaIndex | [migration-to-11.8.8-llamaindex.md](./frameworks/migration-to-11.8.8-llamaindex.md) |
+| Base | [migration-to-11.8.8-base.md](./frameworks/migration-to-11.8.8-base.md) |
+| NAT | [migration-to-11.8.8-nat.md](./frameworks/migration-to-11.8.8-nat.md) |
 
 ## Further reading
 

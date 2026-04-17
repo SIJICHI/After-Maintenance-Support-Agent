@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+## 11.8.2
+- Bumped `agent` component from 11.8.8 to 11.8.11
+  - Used the 5XL resource bundle when `ENABLE_AGENT_HA_MODE` was enabled.
+  - Pinned `ag-ui-protocol` to 0.1.15.
+  - Reworked `agent/AGENTS.md` to reflect architecture changes.
+  - Removed `annoy` from agent dependencies as unnecessary.
+- Pinned the `ag-ui-protocol` version for the `fastapi_server` to the same version as the agent to prevent application errors from a version mismatch.
+- Bumped `mcp` component from 0.0.26 to 0.0.27:
+  - Upgraded `datarobot-genai[drmcp]` to `>=0.15.0,<0.16.0` (lockfile resolved to 0.15.2).
+  - CLI: cleared the `MCP_CLI_CONFIGS` interactive default, made the prompt optional, and stopped pre-selecting tool integrations.
+  - Expanded `docs/mcp_client_setup.md` with API token security practices, Cursor env interpolation for deployed servers, VS Code top-level `servers` layout with input variables for secrets, Claude Desktop guidance to keep tokens out of `args`, and related troubleshooting notes.
+
 ## 11.8.1
 - Bumped `agent` component from 11.7.13 to 11.8.8:
   - *Breaking changes*: agent templates (except `base`) no longer require to define agents within class `MyAgent`. They are now converted from their native framework primitives to `MyAgent` with a helper function. Documentation includes a migration guide.

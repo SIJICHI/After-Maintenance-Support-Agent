@@ -100,7 +100,7 @@ def pulumi_mocks(monkeypatch, tmp_path):
     from datarobot.enums import EXECUTION_ENVIRONMENT_VERSION_BUILD_STATUS
 
     _default_ee_version = MagicMock()
-    _default_ee_version.id = "69d773b9881f02076d40b5e2"
+    _default_ee_version.id = "69e2134aa5df12076d70afe7"
     _default_ee_version.build_status = (
         EXECUTION_ENVIRONMENT_VERSION_BUILD_STATUS.SUCCESS
     )
@@ -257,7 +257,7 @@ def test_execution_environment_pinned_set(monkeypatch):
     )
     monkeypatch.setenv(
         "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID",
-        "69d773b9881f02076d40b5e2",
+        "69e2134aa5df12076d70afe7",
     )
 
     import importlib
@@ -270,7 +270,7 @@ def test_execution_environment_pinned_set(monkeypatch):
         "Using default GenAI Agentic Execution Environment."
     )
     agent_infra.pulumi.info.assert_any_call(
-        "Using existing execution environment: python-311-genai-agents-id Version ID: 69d773b9881f02076d40b5e2"
+        "Using existing execution environment: python-311-genai-agents-id Version ID: 69e2134aa5df12076d70afe7"
     )
 
     # Check that ExecutionEnvironment.get was called with the correct parameters
@@ -278,7 +278,7 @@ def test_execution_environment_pinned_set(monkeypatch):
     args, kwargs = agent_infra.pulumi_datarobot.ExecutionEnvironment.get.call_args
 
     assert kwargs["id"] == "python-311-genai-agents-id"
-    assert kwargs["version_id"] == "69d773b9881f02076d40b5e2"
+    assert kwargs["version_id"] == "69e2134aa5df12076d70afe7"
     assert kwargs["resource_name"] == "[unittest] [agent] Execution Environment"
 
     # ExecutionEnvironment constructor should not be called when using default env
@@ -323,7 +323,7 @@ def test_resolve_execution_environment_version_not_found_returns_none(monkeypatc
 
     monkeypatch.setenv(
         "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID",
-        "a1b2c3d4e5f6071829364455",
+        "69e2134aa5df12076d70afe7",
     )
     monkeypatch.setattr(
         "datarobot.ExecutionEnvironmentVersion.get",
@@ -338,7 +338,7 @@ def test_resolve_execution_environment_version_not_found_returns_none(monkeypatc
     assert version_id is None
     agent_infra.pulumi.warn.assert_called_once()
     call_msg = agent_infra.pulumi.warn.call_args[0][0]
-    assert "a1b2c3d4e5f6071829364455" in call_msg
+    assert "69e2134aa5df12076d70afe7" in call_msg
     assert "using latest" in call_msg
 
 
@@ -480,13 +480,13 @@ def test_custom_model_created_pinned_version_id(monkeypatch):
     """Test that pulumi_datarobot.CustomModel is created with correct arguments."""
     monkeypatch.delenv("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", raising=False)
     monkeypatch.setenv(
-        "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID", "69d773b9881f02076d40b5e2"
+        "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID", "69e2134aa5df12076d70afe7"
     )
     monkeypatch.setattr(
         "pulumi_datarobot.ExecutionEnvironment",
         MagicMock(
             return_value=MagicMock(
-                id="default-id", version_id="69d773b9881f02076d40b5e2"
+                id="default-id", version_id="69e2134aa5df12076d70afe7"
             )
         ),
     )
@@ -506,12 +506,13 @@ def test_custom_model_created_pinned_version_id(monkeypatch):
     agent_infra.pulumi_datarobot.CustomModel.assert_called_once()
     args, kwargs = agent_infra.pulumi_datarobot.CustomModel.call_args
     assert kwargs["base_environment_id"] == "default-id"
-    assert kwargs["base_environment_version_id"] == "69d773b9881f02076d40b5e2"
+    assert kwargs["base_environment_version_id"] == "69e2134aa5df12076d70afe7"
 
 
 def test_custom_model_resource_bundle_and_replicas(monkeypatch):
     """Test that CustomModel is created with correct resource_bundle_id and replicas."""
     monkeypatch.delenv("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", raising=False)
+    monkeypatch.delenv("ENABLE_AGENT_HA_MODE", raising=False)
 
     import importlib
     import infra.agent as agent_infra
@@ -523,11 +524,28 @@ def test_custom_model_resource_bundle_and_replicas(monkeypatch):
     agent_infra.pulumi_datarobot.CustomModel.assert_called_once()
     args, kwargs = agent_infra.pulumi_datarobot.CustomModel.call_args
 
-    # Verify resource_bundle_id is set to cpu.3xlarge
+    # Verify resource_bundle_id is set to cpu.3xlarge (non-HA default)
     assert kwargs["resource_bundle_id"] == "cpu.3xlarge"
 
     # Verify replicas is set to 1
     assert kwargs["replicas"] == 1
+
+
+def test_custom_model_resource_bundle_and_replicas_ha_mode(monkeypatch):
+    """HA mode uses larger resource bundle and multiple replicas."""
+    monkeypatch.delenv("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", raising=False)
+    monkeypatch.setenv("ENABLE_AGENT_HA_MODE", "true")
+
+    import importlib
+    import infra.agent as agent_infra
+
+    agent_infra.pulumi_datarobot.CustomModel.reset_mock()
+    importlib.reload(agent_infra)
+
+    agent_infra.pulumi_datarobot.CustomModel.assert_called_once()
+    args, kwargs = agent_infra.pulumi_datarobot.CustomModel.call_args
+    assert kwargs["resource_bundle_id"] == "cpu.5xlarge"
+    assert kwargs["replicas"] == 2
 
 
 def test_agentic_playground_and_blueprint_created(monkeypatch):
@@ -817,6 +835,7 @@ class TestEnableAgentHAMode:
 
         assert agent_infra.ENABLE_AGENT_HA_MODE is False
         assert agent_infra.DEFAULT_CUSTOM_MODEL_WORKERS == "2"
+        assert agent_infra.DEFAULT_AGENT_RESOURCE_BUNDLE_ID == "cpu.3xlarge"
         assert agent_infra.DEFAULT_AGENT_REPLICAS == 1
         assert agent_infra.DEFAULT_AGENT_DEPLOYMENT_MAX_COMPUTES == 2
 
@@ -830,6 +849,7 @@ class TestEnableAgentHAMode:
 
         assert agent_infra.ENABLE_AGENT_HA_MODE is False
         assert agent_infra.DEFAULT_CUSTOM_MODEL_WORKERS == "2"
+        assert agent_infra.DEFAULT_AGENT_RESOURCE_BUNDLE_ID == "cpu.3xlarge"
         assert agent_infra.DEFAULT_AGENT_REPLICAS == 1
         assert agent_infra.DEFAULT_AGENT_DEPLOYMENT_MAX_COMPUTES == 2
 
@@ -843,6 +863,7 @@ class TestEnableAgentHAMode:
 
         assert agent_infra.ENABLE_AGENT_HA_MODE is True
         assert agent_infra.DEFAULT_CUSTOM_MODEL_WORKERS == "5"
+        assert agent_infra.DEFAULT_AGENT_RESOURCE_BUNDLE_ID == "cpu.5xlarge"
         assert agent_infra.DEFAULT_AGENT_REPLICAS == 2
         assert agent_infra.DEFAULT_AGENT_DEPLOYMENT_MAX_COMPUTES == 4
 
@@ -866,10 +887,12 @@ class TestEnableAgentHAMode:
             assert agent_infra.ENABLE_AGENT_HA_MODE is expected
             if expected:
                 assert agent_infra.DEFAULT_CUSTOM_MODEL_WORKERS == "5"
+                assert agent_infra.DEFAULT_AGENT_RESOURCE_BUNDLE_ID == "cpu.5xlarge"
                 assert agent_infra.DEFAULT_AGENT_REPLICAS == 2
                 assert agent_infra.DEFAULT_AGENT_DEPLOYMENT_MAX_COMPUTES == 4
             else:
                 assert agent_infra.DEFAULT_CUSTOM_MODEL_WORKERS == "2"
+                assert agent_infra.DEFAULT_AGENT_RESOURCE_BUNDLE_ID == "cpu.3xlarge"
                 assert agent_infra.DEFAULT_AGENT_REPLICAS == 1
                 assert agent_infra.DEFAULT_AGENT_DEPLOYMENT_MAX_COMPUTES == 2
 
