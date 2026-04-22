@@ -272,7 +272,7 @@ The `docs/` directory contains detailed documentation for each component of this
 | Document | Description |
 |---|---|
 | [Agent](docs/agent/README.md) | Agent architecture, file structure, framework-specific guides, tool integration, front servers, and debugging. |
-| [LLM configuration](docs/llm-configuration.md) | Configuring LLM providers, DataRobot gateway, deployments, and external APIs. |
+| [LLM component](docs/llm.md) | Configuring LLM providers, DataRobot gateway, deployments, and external APIs. |
 | [MCP server](docs/mcp-server.md) | MCP server architecture, custom tools, and deployment. |
 | [OAuth applications](docs/oauth-applications.md) | OAuth provider setup for external service authentication. |
 

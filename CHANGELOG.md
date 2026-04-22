@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 11.8.3
+- Added documentation build setup using `properdocs` + `mkdocs-material` with DataRobot-branded styling.
+- Added 'task start-non-interactive' which runs 'task start' non interactively.
+- Improved lineage feature flag error handling.
+
 ## 11.8.2
 - Bumped `agent` component from 11.8.8 to 11.8.11
   - Used the 5XL resource bundle when `ENABLE_AGENT_HA_MODE` was enabled.
@@ -34,9 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `SESSION_SECRET_KEY` configuration for session cookie signing.
   - Refreshed MCP documentation.
   - Add AGENTS.md file with MCP server instructions
-- Updated component `llm` from 11.4.17 to 11.4.18
+- Updated component `llm` from 11.4.17 to 11.4.20
   - Fixed deployed LLM configuration: exported `USE_DATAROBOT_LLM_GATEWAY=0` to prevent gateway routing when using a deployed model
   - Renamed `TEXTGEN_DEPLOYMENT_ID` to `LLM_DEPLOYMENT_ID` for consistent naming
+  - Corrected name of LLM Blueprint with LLM Gateway option
+  - Exported URLs for RAG Playground and Deployment Console
+  - Added component documentation (`docs/llm.md`)
 - Fixed tracing setup so traces are configured and visible in the DataRobot app traces
 - Improved performance of application tool call processing.
 - Added AGENTS.md instructions for mcp server & improved instructions for frontend

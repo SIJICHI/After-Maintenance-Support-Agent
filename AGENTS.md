@@ -335,7 +335,7 @@ dr task run frontend_web:install
 **MANDATORY WORKFLOW:**
 1. **BEFORE** writing any import statement for a shadcn/ui component (e.g. `Select`, `Tabs`, `Table`, `Popover`, `DatePicker`, `Dialog`, `Accordion`, etc.)
 2. Check if the file exists: `frontend_web/src/components/ui/{component}.tsx`
-3. If the file does NOT exist, you MUST run: `npx shadcn@latest add {component} --overwrite` from the `frontend_web/` directory
+3. If the file does NOT exist, you MUST run: `npx --yes shadcn@latest add {component} --overwrite` from the `frontend_web/` directory
 4. Wait for the installation to complete
 5. ONLY THEN write code that imports the component
 

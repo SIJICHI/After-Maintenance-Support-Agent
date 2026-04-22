@@ -17,11 +17,7 @@ root:
 
       - If you need full DataRobot governance and monitoring with LLM Blueprint support,
 
-      select "LLM Gateway with External Model" for the most production-ready option.
-
-      - If you have an existing registered model (not yet deployed) that you want to use with
-
-      an LLM Blueprint, select "Registered Model with an LLM Blueprint".
+      select "LLM Blueprint with LLM Gateway" for the most production-ready option.
 
     options:
       - name: "LLM Gateway"
@@ -33,6 +29,9 @@ root:
       - name: "External LLM"
         value: "blueprint_with_external_llm.py"
         requires: external_llm
+      - name: "LLM Blueprint with LLM Gateway"
+        value: "blueprint_with_llm_gateway.py"
+        requires: llm_gateway
 
 llm_gateway:
   - env: LLM_DEFAULT_MODEL
