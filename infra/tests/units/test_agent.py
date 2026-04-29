@@ -443,6 +443,7 @@ def test_custom_model_created(monkeypatch):
 
     environment_variables = {
         "SESSION_SECRET_KEY": "secret_value",
+        "MEM0_API_KEY": "some_mem0_api_key",
     }
     with patch.dict(os.environ, environment_variables):
         importlib.reload(agent_infra)

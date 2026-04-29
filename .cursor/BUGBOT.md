@@ -1,6 +1,6 @@
 # BugBot Review Instructions
 
-You are a code review bot. When reviewing pull requests in this repository, use the guideline below to identify issues and leave comments. The guideline defines critical areas that require sign-offs, general rules for public repositories, changelog expectations, and file operation best practices.
+You are a code review bot. When reviewing pull requests in this repository, use the guideline below to identify issues and leave comments. The guideline defines critical areas that require sign-offs, general rules for public repositories, changelog expectations, user-facing in-repo documentation (section **B3** below), and file operation best practices.
 
 For each violation you detect, leave a comment with a clear title and a message referencing the relevant section of the guideline.
 
@@ -102,6 +102,8 @@ When CHANGELOG.md is present, and your change looks like it should be communicat
 
 Do not add every change: Added .woff2 and .woff and .js files to fastapi_server/static/.gitignore is not important to our users.
 
+When a change affects user-visible behavior, setup, or configuration, also consider **B3** for README and other in-repo user documentation—not only this changelog.
+
 When bumping child components, list all the changes:
 
 ```
@@ -111,6 +113,40 @@ When bumping child components, list all the changes:
   - Fixed header forwarding in LangGraph
   - Added debugpy for debugging in IDE
 ```
+
+### B3. User-facing documentation
+
+**Relationship to other rules**
+
+- User-visible changes may require both **B2** (CHANGELOG) and updates under this section. When both apply, **mention them in one comment thread** so authors get a single checklist.
+- If the PR falls under critical areas that already require DOC involvement (**A1**, **A10**, **A15**, **A20**, or others with explicit DOC requirements), **do not duplicate** generic B3 boilerplate. Reference that section and only add B3-specific gaps (for example exact README paths).
+
+**When to assess**
+
+Decide whether the changes would impact or require updates to user-facing documentation in this repository (for example README files, setup or deployment guides, architecture or customization docs aimed at users, or in-repo descriptions of behavior, configuration, or interfaces).
+
+**Changes that usually do not require documentation updates** (use judgment; avoid nagging when the diff is limited to cases like these):
+
+- Comments-only, internal refactors, or test-only changes with no user-facing behavior
+- Tooling or dependency bumps that do not change documented setup, configuration, or workflows in this repo
+- Fixes that do not alter documented commands, defaults, env vars, or public surfaces described in-repo
+
+**How authors can satisfy this rule**
+
+- Include the documentation updates in the PR, **or**
+- Add a **Documentation** line to the PR description (or a single top-level PR comment), for example: `Documentation: updated README.md and agent/AGENTS.md` or `Documentation: N/A — no user-visible change` or `Documentation: deferred — [DOC-123](https://…) will cover new MCP env vars.`
+- When that line is present and substantive, treat it as meeting the justification or deferral path **unless the diff clearly contradicts** it (for example new user-facing flags with no doc mention and no deferral).
+- For **deferral**, a **linked DOC ticket** plus a **short scope** of what documentation will follow is preferred over an unexplained omission.
+
+**Discussion**
+
+For unclear cases, authors may contact **DOC** stakeholders (see the Stakeholders table) or raise the question in the PR / issue tracker for guidance.
+
+**BugBot behavior when documentation likely needs updates** and the PR has no doc changes and no acceptable justification or deferral:
+
+- Leave **one consolidated comment** on the PR (or append to an existing documentation thread); do not file multiple comments with the same ask.
+- In that comment, **name specific files or topics** that appear affected (for example `README.md` install steps, `agent/AGENTS.md` conventions) so the author has an actionable checklist.
+- Ask the author to update the documentation, add a **Documentation** line with justification, or add a **linked DOC ticket** with scope for deferral.
 
 ### B10. Use git rename when moving files
 

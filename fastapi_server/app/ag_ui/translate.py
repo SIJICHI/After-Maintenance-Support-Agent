@@ -73,7 +73,7 @@ def translate_messages(messages: Iterable[Message]) -> Iterable[ExtendedBaseMess
                 id=tc.tool_call_id or str(tc.uuid),
                 role=Role.TOOL.value,
                 name=tc.name,
-                content=tc.content or "",
+                content=tc.content if tc.content else f"Completed {tc.name}",
                 tool_call_id=tc.agui_id or str(tc.uuid),
                 in_progress=tc.in_progress,
                 error=tc.error,

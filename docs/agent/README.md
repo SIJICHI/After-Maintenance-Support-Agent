@@ -15,6 +15,7 @@ For the official DataRobot documentation on agent components, see [Agent compone
 | [Front servers](#front-servers) | The two supported front server implementations: DRUM and DRAgent. |
 | [Agent types](#agent-types) | Supported agent frameworks and links to examples. |
 | [Debugging](./debugging.md) | Debug agents locally using the CLI, VS Code, and PyCharm. |
+| [Local evaluation](./evaluation.md) | Evaluate agentic workflows locally with Pytest and integrate tests into CI/CD pipelines. |
 | [Further reading](#further-reading) | Links to official DataRobot docs for troubleshooting, tracing, global tools, and more. |
 
 ## Features
@@ -216,7 +217,7 @@ To enable DRAgent, set the following in your `.env` file:
 ENABLE_DRAGENT_SERVER=true
 ```
 
-When enabled locally, the Taskfile starts NAT with the `dragent_fastapi` front-end instead of DRUM. In deployed environments, the `ENABLE_DRAGENT_SERVER` runtime parameter is set automatically by the infrastructure.
+When enabled locally, the Taskfile runs `nat dragent serve` instead of DRUM and forwards CLI commands directly to `nat dragent run`/`query`. In deployed environments, the `ENABLE_DRAGENT_SERVER` runtime parameter is set automatically by the infrastructure.
 
 > [!NOTE]
 > DRAgent is experimental and currently under active development. Use at your own risk.

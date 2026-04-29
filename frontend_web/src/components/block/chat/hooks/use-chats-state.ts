@@ -84,9 +84,15 @@ const createChatSliceFactory = ({ id }: CreateChatArgs) => {
       finishStepEvent: (stepName: string) =>
         set(state => {
           if (state.chats[id]) {
-            const runningStep = state.chats[id].events.find(
-              event => (event as ChatStateEventByType<'step'>).value.name === stepName
-            ) as ChatStateEventByType<'step'>;
+            // Match the first still-running step with this name. Using only
+            // `name === stepName` would always return the first occurrence,
+            // so when the same step name appears across multiple turns the
+            // second STEP_FINISHED would re-close the already-closed first
+            // step and leave the new one stuck on "In progress".
+            const runningStep = state.chats[id].events.find(event => {
+              const step = event as ChatStateEventByType<'step'>;
+              return step.value?.name === stepName && step.value?.isRunning === true;
+            }) as ChatStateEventByType<'step'> | undefined;
             if (runningStep) {
               runningStep.value.isRunning = false;
             }
