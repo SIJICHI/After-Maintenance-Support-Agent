@@ -36,66 +36,16 @@ general:
           examples:
             - "[REMOTE] EVS-X1000、AWS-001のエラー。送水ボタンを押しても水が出ない"
             - "[REMOTE] OPT-002のエラー。画像にノイズが出ている。過去に同様事例はあるか"
-functions:
-  exact_lookup:
-    _type: exact_lookup
-    description: エラーコード表を完全一致検索する。エラーコード（例 AWS-001）が分かっている場合に最初に呼ぶ。
-  structured_query:
-    _type: structured_query
-    description: 修理履歴DBを条件でフィルタし、類似事例・傾向・推奨部品を返す。エラーコードや拠点・期間で絞り込める。
-  semantic_search:
-    _type: semantic_search
-    description: サービスマニュアルおよびベテラン知見ドキュメントを意味検索する。対処手順の詳細や背景知識を調べたい場合に使う。
-  voice_search:
-    _type: voice_search
-    description: ベテランエンジニアの音声インタビュー文字起こしを意味検索する。暗黙知・コツ・注意点を知りたい場合に特に有効。
-  image_search:
-    _type: image_search
-    description: 内視鏡システム構成図から部位をキーワード検索する。部位の位置・構造を確認したい場合に使う。
-function_groups:
-  mcp_tools:
-    _type: datarobot_mcp_client
-authentication:
-  datarobot_mcp_auth:
-    _type: datarobot_mcp_auth
-  datarobot_auth:
-    _type: datarobot_api_key
 llms:
   datarobot_llm:
     _type: datarobot-llm-component
 workflow:
-  _type: per_user_tool_calling_agent
+  _type: langgraph_agent
   llm_name: datarobot_llm
-  tool_names:
-    - exact_lookup
-    - structured_query
-    - semantic_search
-    - voice_search
-    - image_search
-    - mcp_tools
-  system_prompt: |
-    あなたは医療機器（EVS-X1000 内視鏡システム）のアフターメンテナンスを支援するAIエージェントです。
-    以下の2ペルソナのどちらからの問い合わせかをメッセージの文脈から判断し、回答スタイルを変えてください。
-
-    【フィールドサポートエンジニア（現場対応）への回答スタイル】
-    - 現場でそのまま実行できる簡潔なステップ形式で回答する
-    - 不必要な説明を省き、手順番号（①②③）で簡潔にまとめる
-    - 安全上の注意（患者への影響・感染対策リスク等）は必ず明記する
-    - メッセージに "[FIELD]" が含まれる場合、またはペルソナが明示されていない場合はこのスタイルを使う
-
-    【リモートサポートエンジニア（HQトリアージ）への回答スタイル】
-    - ディスパッチ要否（現地派遣が必要か否か）を明記する
-    - 推定原因・類似事例・推奨部品を構造化して提示する
-    - 最終判断はリモートサポートエンジニアが行う旨を添える
-    - メッセージに "[REMOTE]" が含まれる場合はこのスタイルを使う
-
-    【共通ルール（必ず守ること）】
-    1. 回答は必ずツール呼び出し結果に基づくこと。ツールを使わずに推測で回答してはいけない。
-    2. 参照した情報源（エラーコード表／修理履歴件数／マニュアルページ／ベテランインタビュー）を必ず明記する。
-    3. エラーコードが分かっている場合は exact_lookup を最初に呼ぶ。
-    4. 類似事例を調べたい場合は structured_query を呼ぶ。
-    5. 手順の詳細・背景知識を調べたい場合は semantic_search を呼ぶ。
-    6. 暗黙知・ベテランのコツを調べたい場合は voice_search を呼ぶ。
-    7. 部位の構造・位置を確認したい場合は image_search を呼ぶ。
-    8. CLN系（防水・洗浄系）のエラーは感染対策上のリスクに直結するため、他カテゴリより高い優先度で扱う。
-    9. 情報が不十分な場合は複数ツールを組み合わせて検索してから回答する。
+  description: >
+    EVS-X1000 内視鏡システム向けアフターメンテナンス支援エージェント。
+    5ツール（exact_lookup / structured_query / semantic_search / voice_search / image_search）を
+    組み合わせてフィールド・リモートの2ペルソナに根拠付きで回答する。
+authentication:
+  datarobot_auth:
+    _type: datarobot_api_key

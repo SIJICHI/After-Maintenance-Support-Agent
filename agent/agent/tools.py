@@ -23,6 +23,7 @@ from typing import Annotated
 
 import numpy as np
 import pandas as pd
+from langchain_core.tools import tool
 
 DATA_DIR = Path(__file__).parent / "data"
 
@@ -50,7 +51,6 @@ def _build_knowledge_chunks() -> list[dict]:
     for source_file in ["service_manual_excerpt.md", "veteran_interview_transcript.md"]:
         text = (DATA_DIR / source_file).read_text(encoding="utf-8")
         source = source_file.replace(".md", "")
-        # Split on blank lines; keep non-empty paragraphs
         paragraphs = [p.strip() for p in re.split(r"\n{2,}", text) if p.strip()]
         for i, para in enumerate(paragraphs):
             chunks.append({"source": source, "chunk_id": f"{source}#{i}", "text": para})
@@ -64,7 +64,6 @@ def _build_veteran_chunks() -> list[dict]:
     source = "veteran_interview_transcript"
     paragraphs = [p.strip() for p in re.split(r"\n{2,}", text) if p.strip()]
     chunks = []
-    # Try to extract speaker turns (lines starting with 田中：)
     for i, para in enumerate(paragraphs):
         speaker = "田中（ベテランエンジニア）" if "田中：" in para else "インタビュアー"
         chunks.append({"source": source, "chunk_id": f"{source}#{i}", "speaker": speaker, "text": para})
@@ -98,10 +97,12 @@ def _char_ngram_similarity(query: str, text: str, n: int = 2) -> float:
 # ---------------------------------------------------------------------------
 
 
+@tool
 def exact_lookup(
     error_code: Annotated[str, "エラーコード（例: AWS-001, INS-001）"],
 ) -> str:
     """エラーコード表を完全一致で検索し、症状・推定原因・推奨対応・重要度・典型交換部品を返す。
+    エラーコードが判明している場合は最初にこのツールを呼ぶこと。
     エラーコードが不明な場合は semantic_search を使うこと。
     """
     codes = _load_error_codes()
@@ -127,12 +128,13 @@ def exact_lookup(
 # ---------------------------------------------------------------------------
 
 
+@tool
 def structured_query(
-    error_code: Annotated[str, "エラーコードでフィルタ（省略時は空文字列''を渡す）"],
-    model: Annotated[str, "機種名でフィルタ（省略時は空文字列''を渡す）"],
-    site_name: Annotated[str, "病院・拠点名でフィルタ（省略時は空文字列''を渡す）"],
-    date_from: Annotated[str, "開始日 YYYY-MM-DD（省略時は空文字列''を渡す）"],
-    date_to: Annotated[str, "終了日 YYYY-MM-DD（省略時は空文字列''を渡す）"],
+    error_code: Annotated[str, "エラーコードでフィルタ（不要なら空文字列''を渡す）"],
+    model: Annotated[str, "機種名でフィルタ（不要なら空文字列''を渡す）"],
+    site_name: Annotated[str, "病院・拠点名でフィルタ（不要なら空文字列''を渡す）"],
+    date_from: Annotated[str, "開始日 YYYY-MM-DD（不要なら空文字列''を渡す）"],
+    date_to: Annotated[str, "終了日 YYYY-MM-DD（不要なら空文字列''を渡す）"],
 ) -> str:
     """修理履歴DBを条件でフィルタし、類似事例・傾向・推奨部品を返す。
     各条件が空文字列の場合はフィルタしない。最大20件＋集計サマリーを返す。
@@ -173,6 +175,7 @@ def structured_query(
 # ---------------------------------------------------------------------------
 
 
+@tool
 def semantic_search(
     query: Annotated[str, "検索クエリ（自然文・キーワード。日本語可）"],
 ) -> str:
@@ -198,6 +201,7 @@ def semantic_search(
 # ---------------------------------------------------------------------------
 
 
+@tool
 def voice_search(
     query: Annotated[str, "検索クエリ（ベテランエンジニアの暗黙知・コツを検索したい場合に使う）"],
 ) -> str:
@@ -223,7 +227,6 @@ def voice_search(
 # Tool 5: image_search
 # ---------------------------------------------------------------------------
 
-# Keyword → component name mapping (covers EVS-X1000 component diagram sections)
 _COMPONENT_MAP: dict[str, str] = {
     "サンプラー": "サンプラー部（検体採取機構）",
     "挿入部": "挿入部",
@@ -249,6 +252,7 @@ _COMPONENT_MAP: dict[str, str] = {
 }
 
 
+@tool
 def image_search(
     component_keyword: Annotated[str, "部位名キーワード（例: 送水, 湾曲部, ライトガイド, 防水）"],
 ) -> str:
@@ -265,13 +269,8 @@ def image_search(
             break
 
     if matched_component is None:
-        # Fuzzy: try character overlap with keys
-        best_key, best_score = max(
-            _COMPONENT_MAP.keys(),
-            key=lambda k: _char_ngram_similarity(kw, k),
-        ), 0.0
-        best_score = _char_ngram_similarity(kw, best_key)
-        if best_score > 0.1:
+        best_key = max(_COMPONENT_MAP.keys(), key=lambda k: _char_ngram_similarity(kw, k))
+        if _char_ngram_similarity(kw, best_key) > 0.1:
             matched_component = _COMPONENT_MAP[best_key]
 
     if matched_component is None:

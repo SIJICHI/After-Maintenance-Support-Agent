@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import agent.register  # noqa: F401 — side effect: registers custom nat_tools before workflow.yaml is parsed
-
 from agent.config import Config
 from agent.myagent import MyAgent, custompy_adaptor
 
