@@ -1,4 +1,4 @@
-import { memo, useMemo, Component, type ReactNode, type ErrorInfo } from 'react';
+import { memo, useMemo, useState, Component, type ReactNode, type ErrorInfo } from 'react';
 import {
   User,
   Bot,
@@ -90,18 +90,100 @@ export function UniversalContentPart({ part }: { part: ContentPart }) {
 }
 
 const CHOICES_REGEX = /\[\[choices\]\]\s*([\s\S]*?)\s*\[\[\/choices\]\]/;
+const STEPS_REGEX = /\[\[steps\]\]\s*([\s\S]*?)\s*\[\[\/steps\]\]/;
 
-function parseChoices(content: string): { text: string; choices: string[] } {
-  const match = content.match(CHOICES_REGEX);
+function parseBlock(content: string, regex: RegExp): { rest: string; items: string[] } {
+  const match = content.match(regex);
   if (!match) {
-    return { text: content, choices: [] };
+    return { rest: content, items: [] };
   }
-  const choices = match[1]
+  const items = match[1]
     .split('\n')
     .map(line => line.replace(/^[\s\-*0-9.)、）]+/, '').trim())
     .filter(Boolean);
-  const text = content.replace(CHOICES_REGEX, '').trimEnd();
-  return { text, choices };
+  const rest = content.replace(regex, '').trimEnd();
+  return { rest, items };
+}
+
+function parseContent(content: string): { text: string; steps: string[]; choices: string[] } {
+  const stepsResult = parseBlock(content, STEPS_REGEX);
+  const choicesResult = parseBlock(stepsResult.rest, CHOICES_REGEX);
+  return { text: choicesResult.rest, steps: stepsResult.items, choices: choicesResult.items };
+}
+
+// 内容から安定したキーを作り、チェック状態を localStorage に保存する（リロードしても維持）。
+function hashKey(input: string): string {
+  let hash = 5381;
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash * 33) ^ input.charCodeAt(i);
+  }
+  return `fse-steps-${(hash >>> 0).toString(36)}`;
+}
+
+function StepChecklist({ steps }: { steps: string[] }) {
+  const { t } = useTranslation();
+  const storageKey = useMemo(() => hashKey(steps.join('|')), [steps]);
+  const [checked, setChecked] = useState<boolean[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          const parsed = JSON.parse(saved) as boolean[];
+          if (Array.isArray(parsed) && parsed.length === steps.length) {
+            return parsed;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return steps.map(() => false);
+  });
+
+  const toggle = (i: number) => {
+    setChecked(prev => {
+      const next = prev.map((v, idx) => (idx === i ? !v : v));
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
+  const doneCount = checked.filter(Boolean).length;
+
+  return (
+    <div className="my-2 rounded-lg border border-border bg-card/50 p-3">
+      <div className="mb-2 flex items-center gap-2 caption-01 text-muted-foreground">
+        <CheckCircle2 className="size-4" />
+        {t('Work checklist')} ({doneCount}/{steps.length})
+      </div>
+      <ul className="flex flex-col gap-1.5">
+        {steps.map((step, i) => (
+          <li key={i}>
+            <label className="flex cursor-pointer items-start gap-2.5">
+              <input
+                type="checkbox"
+                checked={checked[i] ?? false}
+                onChange={() => toggle(i)}
+                className="mt-0.5 size-4 shrink-0 accent-primary"
+              />
+              <span
+                className={cn(
+                  'body-secondary',
+                  checked[i] && 'text-muted-foreground line-through'
+                )}
+              >
+                {step}
+              </span>
+            </label>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function QuickReplies({ choices }: { choices: string[] }) {
@@ -131,10 +213,11 @@ function QuickReplies({ choices }: { choices: string[] }) {
 }
 
 export function TextContentPart({ content }: { content: string }) {
-  const { text, choices } = useMemo(() => parseChoices(content ? content : ''), [content]);
+  const { text, steps, choices } = useMemo(() => parseContent(content ? content : ''), [content]);
   return (
     <>
       <Markdown>{text}</Markdown>
+      {steps.length > 0 && <StepChecklist steps={steps} />}
       {choices.length > 0 && <QuickReplies choices={choices} />}
     </>
   );

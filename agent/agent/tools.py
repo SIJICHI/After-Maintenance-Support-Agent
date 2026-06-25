@@ -16,7 +16,9 @@
 from __future__ import annotations
 
 import json
+import random
 import re
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
@@ -26,6 +28,10 @@ import pandas as pd
 from langchain_core.tools import tool
 
 DATA_DIR = Path(__file__).parent / "data"
+
+# ディスパッチ（HQエスカレーション）の保存先。プロセス内 dict ＋ JSONファイルで永続化。
+# モックアップのため簡易実装。本番では DataRobot 側のデータストア等に置き換える想定。
+DISPATCH_FILE = Path(__file__).parent / "dispatch_store.json"
 
 
 # ---------------------------------------------------------------------------
@@ -289,3 +295,98 @@ def image_search(
         ),
     }
     return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+# ---------------------------------------------------------------------------
+# Tool 6 & 7: HQ escalation / dispatch handoff
+# ---------------------------------------------------------------------------
+
+# プロセス内キャッシュ（同一サーバ稼働中は保持される）
+_DISPATCH_STORE: dict[str, dict] = {}
+
+
+def _load_dispatch_store() -> dict[str, dict]:
+    """JSONファイルからディスパッチ記録を読み込む（プロセス内 dict にマージ）。"""
+    if not _DISPATCH_STORE and DISPATCH_FILE.exists():
+        try:
+            data = json.loads(DISPATCH_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                _DISPATCH_STORE.update(data)
+        except (json.JSONDecodeError, OSError):
+            pass
+    return _DISPATCH_STORE
+
+
+def _save_dispatch_store() -> None:
+    try:
+        DISPATCH_FILE.write_text(
+            json.dumps(_DISPATCH_STORE, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    except OSError:
+        pass
+
+
+@tool
+def create_dispatch_ticket(
+    summary: Annotated[
+        str,
+        "FSEとエージェントのやり取りの要約。発生症状・実施した切り分け/作業・確認できた結果・"
+        "未解決の論点・現在の困りごとを、RSEがすぐ状況を把握できるよう簡潔にまとめた文章。",
+    ],
+    error_codes: Annotated[str, "関連するエラーコード（カンマ区切り。なければ空文字列''）"],
+    recommended_parts: Annotated[str, "推定される推奨部品（カンマ区切り。なければ空文字列''）"],
+    open_questions: Annotated[str, "RSEに引き継ぐ未解決の確認事項・困りごと（なければ空文字列''）"],
+) -> str:
+    """現場のFSEが切り分け・修理に行き詰まった際、HQのリモートサポートエンジニア（RSE）へ
+    エスカレーションするためのディスパッチ票を発行する。会話内容を要約して一意のディスパッチ番号に
+    紐づけて保存し、RSEが get_dispatch_ticket で即座に状況をキャッチアップできるようにする。
+    FSEが「HQに相談する」を選んだときに呼ぶこと。
+    """
+    store = _load_dispatch_store()
+    today = datetime.now(timezone.utc).strftime("%Y%m%d")
+    dispatch_id = f"D-{today}-{random.randint(1000, 9999)}"
+    while dispatch_id in store:
+        dispatch_id = f"D-{today}-{random.randint(1000, 9999)}"
+
+    ticket = {
+        "dispatch_id": dispatch_id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "status": "open",
+        "summary": summary,
+        "error_codes": error_codes,
+        "recommended_parts": recommended_parts,
+        "open_questions": open_questions,
+    }
+    store[dispatch_id] = ticket
+    _save_dispatch_store()
+    return json.dumps(
+        {
+            "dispatch_id": dispatch_id,
+            "status": "open",
+            "message": (
+                f"ディスパッチ票 {dispatch_id} を発行しました。"
+                "この番号をHQのリモートサポートエンジニア（RSE）に伝えてください。"
+                "RSEはこの番号でこれまでの対応内容を即座に確認できます。"
+            ),
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+
+
+@tool
+def get_dispatch_ticket(
+    dispatch_id: Annotated[str, "ディスパッチ番号（例: D-20260625-1234）"],
+) -> str:
+    """ディスパッチ番号に紐づく、FSEとエージェントのこれまでのやり取りの要約を取得する。
+    HQのリモートサポートエンジニア（RSE）が、現場から伝えられたディスパッチ番号で
+    状況をキャッチアップするために使う。
+    """
+    store = _load_dispatch_store()
+    ticket = store.get(dispatch_id.strip())
+    if ticket is None:
+        return json.dumps(
+            {"error": f"ディスパッチ番号 '{dispatch_id}' は見つかりませんでした。"},
+            ensure_ascii=False,
+        )
+    return json.dumps(ticket, ensure_ascii=False, indent=2)

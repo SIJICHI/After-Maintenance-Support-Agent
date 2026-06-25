@@ -22,7 +22,9 @@ import json
 import pytest
 
 from agent.tools import (
+    create_dispatch_ticket,
     exact_lookup,
+    get_dispatch_ticket,
     image_search,
     semantic_search,
     structured_query,
@@ -164,3 +166,52 @@ class TestImageSearch:
 
     def test_tool_name(self):
         assert image_search.name == "image_search"
+
+
+class TestDispatch:
+    def test_create_returns_dispatch_id(self):
+        result = json.loads(
+            create_dispatch_ticket.invoke({
+                "summary": "湾曲抵抗の切り分け中。CLN系疑い。",
+                "error_codes": "INS-003",
+                "recommended_parts": "湾曲部ゴム",
+                "open_questions": "リーク箇所未特定",
+            })
+        )
+        assert result["dispatch_id"].startswith("D-")
+        assert result["status"] == "open"
+
+    def test_create_then_get_roundtrip(self):
+        created = json.loads(
+            create_dispatch_ticket.invoke({
+                "summary": "送水不良の切り分け中",
+                "error_codes": "AWS-001",
+                "recommended_parts": "送水ポンプ",
+                "open_questions": "ポンプ単体故障か配管閉塞か未確定",
+            })
+        )
+        dispatch_id = created["dispatch_id"]
+        fetched = json.loads(get_dispatch_ticket.invoke({"dispatch_id": dispatch_id}))
+        assert fetched["dispatch_id"] == dispatch_id
+        assert fetched["summary"] == "送水不良の切り分け中"
+        assert fetched["error_codes"] == "AWS-001"
+        assert fetched["open_questions"] == "ポンプ単体故障か配管閉塞か未確定"
+
+    def test_get_unknown_returns_error(self):
+        result = json.loads(get_dispatch_ticket.invoke({"dispatch_id": "D-99999999-0000"}))
+        assert "error" in result
+
+    def test_dispatch_ids_are_unique(self):
+        ids = set()
+        for _ in range(5):
+            r = json.loads(
+                create_dispatch_ticket.invoke({
+                    "summary": "test", "error_codes": "", "recommended_parts": "", "open_questions": "",
+                })
+            )
+            ids.add(r["dispatch_id"])
+        assert len(ids) == 5
+
+    def test_tool_names(self):
+        assert create_dispatch_ticket.name == "create_dispatch_ticket"
+        assert get_dispatch_ticket.name == "get_dispatch_ticket"
