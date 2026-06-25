@@ -89,8 +89,55 @@ export function UniversalContentPart({ part }: { part: ContentPart }) {
   return <CodeBlock code={JSON.stringify(part, null, '  ')} />;
 }
 
+const CHOICES_REGEX = /\[\[choices\]\]\s*([\s\S]*?)\s*\[\[\/choices\]\]/;
+
+function parseChoices(content: string): { text: string; choices: string[] } {
+  const match = content.match(CHOICES_REGEX);
+  if (!match) {
+    return { text: content, choices: [] };
+  }
+  const choices = match[1]
+    .split('\n')
+    .map(line => line.replace(/^[\s\-*0-9.)、）]+/, '').trim())
+    .filter(Boolean);
+  const text = content.replace(CHOICES_REGEX, '').trimEnd();
+  return { text, choices };
+}
+
+function QuickReplies({ choices }: { choices: string[] }) {
+  const { sendMessage, isAgentRunning } = useChatContext();
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {choices.map((choice, i) => (
+        <button
+          key={i}
+          type="button"
+          disabled={isAgentRunning}
+          onClick={() => sendMessage(choice)}
+          className={cn(
+            `
+              rounded-full border border-border bg-card px-4 py-2 body-secondary
+              transition-colors
+              hover:bg-accent hover:text-accent-foreground
+            `,
+            'disabled:cursor-not-allowed disabled:opacity-50'
+          )}
+        >
+          {choice}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function TextContentPart({ content }: { content: string }) {
-  return <Markdown>{content ? content : ''}</Markdown>;
+  const { text, choices } = useMemo(() => parseChoices(content ? content : ''), [content]);
+  return (
+    <>
+      <Markdown>{text}</Markdown>
+      {choices.length > 0 && <QuickReplies choices={choices} />}
+    </>
+  );
 }
 
 export function ToolInvocationPart({ part }: { part: ToolInvocationUIPart }) {
