@@ -94,7 +94,7 @@ def cli(
     # Run the agent with a JSON user prompt    > task cli -- execute --user_prompt '{"topic": "Artificial Intelligence"}'
 
     # Run the agent with a JSON file containing the full chat completion json; include prior messages for chat history.
-    # Prior messages are injected as {chat_history} when the prompt template declares it.
+    # Prior messages are not injected by default; the workflow receives only the latest user prompt.
     > task cli -- execute --completion_json "example-completion.json"
     > task cli -- execute --completion_json "example-chat-history-completion.json"
 
@@ -136,7 +136,7 @@ def execute(
     # Run the agent with a JSON user prompt    > task cli -- execute --user_prompt '{"topic": "Artificial Intelligence"}'
 
     # Run the agent with a JSON file containing the full chat completion json; include prior messages for chat history.
-    # Prior messages are injected as {chat_history} when the prompt template declares it.
+    # Prior messages are not injected by default; the workflow receives only the latest user prompt.
     > task cli -- execute --completion_json "example-completion.json"
     > task cli -- execute --completion_json "example-chat-history-completion.json"
     """
@@ -220,7 +220,7 @@ def execute_deployment(
     # Run the agent with a JSON user prompt    > task cli -- execute-deployment --user_prompt '{"topic": "Artificial Intelligence"}' --deployment_id 680a77a9a3
 
     # Run the agent with a JSON file containing the full chat completion json; include prior messages for chat history.
-    # Prior messages are injected as {chat_history} when the prompt template declares it.
+    # Prior messages are not injected by default; the workflow receives only the latest user prompt.
     > task cli -- execute-deployment --completion_json "example-completion.json" --deployment_id 680a77a9a3
     > task cli -- execute-deployment --completion_json "example-chat-history-completion.json" --deployment_id 680a77a9a3
     """

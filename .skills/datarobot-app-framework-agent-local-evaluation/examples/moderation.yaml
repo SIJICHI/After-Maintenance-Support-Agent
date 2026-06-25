@@ -1,4 +1,3 @@
----
 # moderation.yaml
 #
 # Place this file at the root of the agent directory (alongside custom.py).
@@ -14,7 +13,7 @@
 # Choose the guards that match your use case and remove the rest.
 
 timeout_sec: 60
-timeout_action: block  # "score" to treat timeouts as pass during development
+timeout_action: block   # "score" to treat timeouts as pass during development
 
 guards:
   # ── Agent Goal Accuracy ──────────────────────────────────────────────────
@@ -32,7 +31,7 @@ guards:
       message: "Agent failed to achieve the user's goal."
       conditions:
         - comparator: lessThan
-          comparand: 0.7  # Fail if accuracy score is below 70%
+          comparand: 0.7   # Fail if accuracy score is below 70%
 
   # ── Faithfulness (hallucination detection) ───────────────────────────────
   # Use for RAG agents. Requires copy_citations: true and retrieved_contexts
@@ -66,3 +65,4 @@ guards:
       conditions:
         - comparator: lessThan
           comparand: 0.5
+

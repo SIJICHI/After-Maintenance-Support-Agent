@@ -5,7 +5,7 @@ description = "Implementation of agent"
 readme = "README.md"
 requires-python = ">=3.11, <3.14"
 dependencies = [
-    "datarobot-genai[langgraph, dragent]==0.15.24",
+    "datarobot-genai[nat, dragent]==0.15.24",
     "datarobot-moderations[all]==11.2.24",
     "datarobot-drum==1.17.11.post1",  # Lift upper limit after asyncio migration finished
     "datarobot-mlops==11.1.0",
@@ -242,9 +242,8 @@ environments = [
 extras = []
 
 
-[project.entry-points.'nat.plugins']
-langgraph_agent = "agent.register"
-
-
 [tool.setuptools.packages.find]
 include = ["agent*"]
+
+[tool.setuptools.package-data]
+agent = ["data/*.csv", "data/*.md", "data/*.svg"]
