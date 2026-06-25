@@ -10,7 +10,7 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  theme: 'light',
+  theme: 'dark',
   setTheme: () => {},
 });
 
@@ -20,15 +20,9 @@ export const useTheme = () => {
 
 const themeKey = 'app-theme';
 
-const getInitialTheme = () => {
-  if (typeof window !== 'undefined') {
-    const savedTheme = localStorage.getItem(themeKey);
-    if (savedTheme) {
-      return savedTheme as Theme;
-    }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  }
-  return 'light';
+const getInitialTheme = (): Theme => {
+  // 背景を黒（ダークテーマ）に固定する。
+  return 'dark';
 };
 
 export const ThemeProvider = ({
