@@ -450,9 +450,12 @@ function QuickReplies({ choices }: { choices: string[] }) {
     });
   };
 
+  // 「その他」チップはUIが常に付けるため、エージェントが出した同義の選択肢は除去して重複を防ぐ。
+  const visibleChoices = choices.filter(c => !/^(その他|other)/i.test(c.trim()));
+
   return (
     <div className="mt-3 flex flex-wrap gap-2">
-      {choices.map((choice, i) => (
+      {visibleChoices.map((choice, i) => (
         <button
           key={i}
           type="button"
@@ -483,7 +486,7 @@ function QuickReplies({ choices }: { choices: string[] }) {
           'disabled:cursor-not-allowed disabled:opacity-50'
         )}
       >
-        {t('Other (free text)')}
+        {t('その他（自由記述）')}
       </button>
     </div>
   );
