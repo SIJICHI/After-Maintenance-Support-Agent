@@ -549,7 +549,7 @@ function HandoffDraftCard({ handoff }: { handoff: HandoffDraft }) {
               rows={key === 'summary' || key === 'open_questions' ? 3 : 1}
               className={`
                 w-full resize-y rounded-md border border-border bg-background px-2 py-1.5
-                body-secondary
+                body-secondary text-foreground!
                 focus:border-primary focus:outline-none
                 disabled:opacity-60
               `}
