@@ -151,6 +151,51 @@ function hashKey(input: string): string {
   return `fse-steps-${(hash >>> 0).toString(36)}`;
 }
 
+// 注意事項セル。各項目はセミコロン区切り。先頭が「!」の項目は安全重要事項として
+// 警告アイコン＋赤系で強調する。
+function NotesCell({ notes, dimmed }: { notes: string; dimmed: boolean }) {
+  const items = notes
+    .split(/[;；]/)
+    .map(n => n.trim())
+    .filter(Boolean);
+
+  if (items.length === 0) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  return (
+    <ul className="space-y-1">
+      {items.map((raw, i) => {
+        const isSafety = /^[!！]/.test(raw);
+        const text = raw.replace(/^[!！]\s*/, '');
+        if (isSafety) {
+          return (
+            <li
+              key={i}
+              className={cn(
+                `
+                  flex items-start gap-1.5 rounded border border-destructive/40
+                  bg-destructive/10 px-2 py-1 text-destructive
+                `,
+                dimmed && 'opacity-60'
+              )}
+            >
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+              <span className="font-medium">{text}</span>
+            </li>
+          );
+        }
+        return (
+          <li key={i} className="flex items-start gap-1.5">
+            <span className="mt-1.5 size-1 shrink-0 rounded-full bg-muted-foreground" />
+            <span>{text}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function StepChecklist({ steps }: { steps: StepRow[] }) {
   const { t } = useTranslation();
   const storageKey = useMemo(() => hashKey(steps.map(s => s.item).join('|')), [steps]);
@@ -237,7 +282,7 @@ function StepChecklist({ steps }: { steps: StepRow[] }) {
                   )}
                 </td>
                 <td className={cn('px-3 py-2', checked[i] && 'text-muted-foreground')}>
-                  {row.notes ? row.notes : <span className="text-muted-foreground">—</span>}
+                  <NotesCell notes={row.notes} dimmed={!!checked[i]} />
                 </td>
               </tr>
             ))}
