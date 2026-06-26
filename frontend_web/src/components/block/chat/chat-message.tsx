@@ -385,7 +385,7 @@ function StepChecklist({
         {t('Work checklist')} ({doneCount}/{steps.length})
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse body-secondary">
+        <table className="w-full border-collapse body-secondary text-foreground">
           <thead>
             <tr className="border-b border-border bg-muted/20 text-left">
               <th className="w-10 px-2 py-2 text-center">✓</th>
