@@ -92,6 +92,12 @@ export function UniversalContentPart({ part }: { part: ContentPart }) {
 const CHOICES_REGEX = /\[\[choices\]\]\s*([\s\S]*?)\s*\[\[\/choices\]\]/;
 const STEPS_REGEX = /\[\[steps\]\]\s*([\s\S]*?)\s*\[\[\/steps\]\]/;
 
+interface StepRow {
+  item: string;
+  details: string[];
+  notes: string;
+}
+
 function parseBlock(content: string, regex: RegExp): { rest: string; items: string[] } {
   const match = content.match(regex);
   if (!match) {
@@ -105,10 +111,35 @@ function parseBlock(content: string, regex: RegExp): { rest: string; items: stri
   return { rest, items };
 }
 
-function parseContent(content: string): { text: string; steps: string[]; choices: string[] } {
-  const stepsResult = parseBlock(content, STEPS_REGEX);
+// [[steps]] ブロックを「作業項目 | 詳細1;詳細2 | 注意事項」のパイプ区切り行として解析する。
+function parseSteps(content: string): { rest: string; rows: StepRow[] } {
+  const match = content.match(STEPS_REGEX);
+  if (!match) {
+    return { rest: content, rows: [] };
+  }
+  const rows: StepRow[] = match[1]
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => {
+      const cols = line.split('|').map(c => c.trim());
+      const item = (cols[0] ?? '').replace(/^[\s\-*0-9.)、）]+/, '').trim();
+      const details = (cols[1] ?? '')
+        .split(/[;；]/)
+        .map(d => d.trim())
+        .filter(Boolean);
+      const notes = cols[2] ?? '';
+      return { item, details, notes };
+    })
+    .filter(row => row.item);
+  const rest = content.replace(STEPS_REGEX, '').trimEnd();
+  return { rest, rows };
+}
+
+function parseContent(content: string): { text: string; steps: StepRow[]; choices: string[] } {
+  const stepsResult = parseSteps(content);
   const choicesResult = parseBlock(stepsResult.rest, CHOICES_REGEX);
-  return { text: choicesResult.rest, steps: stepsResult.items, choices: choicesResult.items };
+  return { text: choicesResult.rest, steps: stepsResult.rows, choices: choicesResult.items };
 }
 
 // 内容から安定したキーを作り、チェック状態を localStorage に保存する（リロードしても維持）。
@@ -120,9 +151,9 @@ function hashKey(input: string): string {
   return `fse-steps-${(hash >>> 0).toString(36)}`;
 }
 
-function StepChecklist({ steps }: { steps: string[] }) {
+function StepChecklist({ steps }: { steps: StepRow[] }) {
   const { t } = useTranslation();
-  const storageKey = useMemo(() => hashKey(steps.join('|')), [steps]);
+  const storageKey = useMemo(() => hashKey(steps.map(s => s.item).join('|')), [steps]);
   const [checked, setChecked] = useState<boolean[]>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -155,33 +186,64 @@ function StepChecklist({ steps }: { steps: string[] }) {
   const doneCount = checked.filter(Boolean).length;
 
   return (
-    <div className="my-2 rounded-lg border border-border bg-card/50 p-3">
-      <div className="mb-2 flex items-center gap-2 caption-01 text-muted-foreground">
+    <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
+      <div
+        className={`
+          flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2
+          caption-01 text-muted-foreground
+        `}
+      >
         <CheckCircle2 className="size-4" />
         {t('Work checklist')} ({doneCount}/{steps.length})
       </div>
-      <ul className="flex flex-col gap-1.5">
-        {steps.map((step, i) => (
-          <li key={i}>
-            <label className="flex cursor-pointer items-start gap-2.5">
-              <input
-                type="checkbox"
-                checked={checked[i] ?? false}
-                onChange={() => toggle(i)}
-                className="mt-0.5 size-4 shrink-0 accent-primary"
-              />
-              <span
-                className={cn(
-                  'body-secondary',
-                  checked[i] && 'text-muted-foreground line-through'
-                )}
-              >
-                {step}
-              </span>
-            </label>
-          </li>
-        ))}
-      </ul>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse body-secondary">
+          <thead>
+            <tr className="border-b border-border bg-muted/20 text-left">
+              <th className="w-10 px-2 py-2 text-center">✓</th>
+              <th className="px-3 py-2">{t('Step')}</th>
+              <th className="px-3 py-2">{t('Details')}</th>
+              <th className="px-3 py-2">{t('Notes')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {steps.map((row, i) => (
+              <tr key={i} className="border-b border-border last:border-b-0 align-top">
+                <td className="px-2 py-2 text-center">
+                  <input
+                    type="checkbox"
+                    checked={checked[i] ?? false}
+                    onChange={() => toggle(i)}
+                    className="mt-0.5 size-4 accent-primary"
+                  />
+                </td>
+                <td
+                  className={cn(
+                    'px-3 py-2 font-medium',
+                    checked[i] && 'text-muted-foreground line-through'
+                  )}
+                >
+                  {row.item}
+                </td>
+                <td className={cn('px-3 py-2', checked[i] && 'text-muted-foreground')}>
+                  {row.details.length > 0 ? (
+                    <ul className="list-disc space-y-0.5 pl-4">
+                      {row.details.map((d, j) => (
+                        <li key={j}>{d}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </td>
+                <td className={cn('px-3 py-2', checked[i] && 'text-muted-foreground')}>
+                  {row.notes ? row.notes : <span className="text-muted-foreground">—</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
