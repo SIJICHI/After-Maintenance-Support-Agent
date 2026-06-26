@@ -683,6 +683,25 @@ export function ToolInvocationPart({ part }: { part: ToolInvocationUIPart }) {
     });
   }
 
+  return <ToolInvocationCard toolName={toolInvocation.toolName} args={toolInvocation.args} result={result} hasResult={hasResult} />;
+}
+
+// Tool Call カード。デフォルトは折りたたみ（ヘッダークリックで Arguments / Result を開閉）。
+function ToolInvocationCard({
+  toolName,
+  args,
+  result,
+  hasResult,
+}: {
+  toolName: string;
+  args: unknown;
+  result: string;
+  hasResult: boolean;
+}) {
+  const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+  const hasBody = !!args || !!result;
+
   return (
     <div
       className={`
@@ -690,17 +709,30 @@ export function ToolInvocationPart({ part }: { part: ToolInvocationUIPart }) {
         dark:bg-card/30
       `}
     >
-      {/* Header */}
-      <div
+      {/* Header (clickable to expand/collapse) */}
+      <button
+        type="button"
+        onClick={() => setExpanded(prev => !prev)}
+        disabled={!hasBody}
         className={`
-          flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2
+          flex w-full items-center gap-2 border-b border-border bg-muted/30 px-3 py-2
+          text-left transition-colors
+          hover:bg-muted/40
+          disabled:cursor-default
           dark:bg-muted/20
         `}
       >
+        <ChevronRight
+          className={cn(
+            'size-3.5 shrink-0 text-muted-foreground transition-transform',
+            expanded && 'rotate-90',
+            !hasBody && 'opacity-0'
+          )}
+        />
         <Wrench className="size-4 text-muted-foreground" />
         <span className="body-secondary">{t('Tool Call')}</span>
         <Badge variant="default" className="code">
-          {toolInvocation.toolName}
+          {toolName}
         </Badge>
         {hasResult ? (
           <CheckCircle2
@@ -712,33 +744,37 @@ export function ToolInvocationPart({ part }: { part: ToolInvocationUIPart }) {
         ) : (
           <Loader2 className="ml-auto size-4 animate-spin text-muted-foreground" />
         )}
-      </div>
+      </button>
 
-      {/* Arguments Section */}
-      {toolInvocation.args && (
-        <div
-          className={`
-            border-b border-border
-            last:border-b-0
-          `}
-        >
-          <div className="flex items-center gap-1.5 bg-muted/20 caption-01 px-3 py-1.5">
-            <ChevronRight className="size-3" />
-            {t('Arguments')}
-          </div>
-          <CodeBlock code={JSON.stringify(toolInvocation.args, null, '  ')} />
-        </div>
-      )}
+      {expanded && (
+        <>
+          {/* Arguments Section */}
+          {!!args && (
+            <div
+              className={`
+                border-b border-border
+                last:border-b-0
+              `}
+            >
+              <div className="flex items-center gap-1.5 bg-muted/20 caption-01 px-3 py-1.5">
+                <ChevronRight className="size-3" />
+                {t('Arguments')}
+              </div>
+              <CodeBlock code={JSON.stringify(args, null, '  ')} />
+            </div>
+          )}
 
-      {/* Result Section */}
-      {result && (
-        <div>
-          <div className="flex items-center gap-1.5 bg-muted/20 caption-01 px-3 py-1.5">
-            <ChevronRight className="size-3" />
-            {t('Result')}
-          </div>
-          <CodeBlock code={result} />
-        </div>
+          {/* Result Section */}
+          {result && (
+            <div>
+              <div className="flex items-center gap-1.5 bg-muted/20 caption-01 px-3 py-1.5">
+                <ChevronRight className="size-3" />
+                {t('Result')}
+              </div>
+              <CodeBlock code={result} />
+            </div>
+          )}
+        </>
       )}
     </div>
   );
