@@ -415,3 +415,42 @@ def get_dispatch_ticket(
             ensure_ascii=False,
         )
     return json.dumps(ticket, ensure_ascii=False, indent=2)
+
+
+@tool
+def release_action_plan(
+    dispatch_id: Annotated[str, "対象のディスパッチ番号（子番号。例: D-20260625-1234-01）"],
+    action_plan: Annotated[
+        str,
+        "RSEが編集・確定したFSE向けネクストアクション。1行1作業で、各行は "
+        "「作業項目 | 詳細1;詳細2 | 注意事項」のパイプ区切り形式（[[steps]]と同じ書式）。",
+    ],
+) -> str:
+    """RSEがFSEと相談しながら確定したネクストアクション（次にFSEが現地で実施すべき作業手順）を、
+    ディスパッチ番号に紐づけて「リリース（FSEへ共有）」する。これにより現地のFSEは
+    同じディスパッチ番号でリリース済みの作業手順を取得し、チェックリストとして実施できる。
+    """
+    store = _load_dispatch_store()
+    ticket = store.get(dispatch_id.strip())
+    if ticket is None:
+        return json.dumps(
+            {"error": f"ディスパッチ番号 '{dispatch_id}' は見つかりませんでした。"},
+            ensure_ascii=False,
+        )
+    ticket["released_action_plan"] = action_plan
+    ticket["released_at"] = datetime.now(timezone.utc).isoformat()
+    ticket["status"] = "action_released"
+    store[dispatch_id.strip()] = ticket
+    _save_dispatch_store()
+    return json.dumps(
+        {
+            "dispatch_id": dispatch_id.strip(),
+            "status": "action_released",
+            "message": (
+                f"ネクストアクションをディスパッチ番号 {dispatch_id.strip()} にリリースしました。"
+                "現地のFSEはこの番号で最新の作業手順を取得し、チェックリストとして実施できます。"
+            ),
+        },
+        ensure_ascii=False,
+        indent=2,
+    )

@@ -104,6 +104,7 @@ const STEPS_REGEX = /\[\[steps\]\]\s*([\s\S]*?)\s*\[\[\/steps\]\]/;
 const COMPLETE_REGEX = /\[\[complete_action\]\]\s*([\s\S]*?)\s*\[\[\/complete_action\]\]/;
 const REPORT_REGEX = /\[\[report\]\]\s*([\s\S]*?)\s*\[\[\/report\]\]/;
 const HANDOFF_REGEX = /\[\[handoff_draft\]\]\s*([\s\S]*?)\s*\[\[\/handoff_draft\]\]/;
+const RSE_ACTIONS_REGEX = /\[\[rse_actions\]\]\s*([\s\S]*?)\s*\[\[\/rse_actions\]\]/;
 
 interface StepRow {
   item: string;
@@ -134,6 +135,34 @@ function parseSteps(content: string): { rest: string; rows: StepRow[] } {
     .filter(row => row.item);
   const rest = content.replace(STEPS_REGEX, '').trimEnd();
   return { rest, rows };
+}
+
+// パイプ区切り行（作業項目 | 詳細1;詳細2 | 注意事項）を StepRow[] に解析する。
+function parsePipeRows(body: string): StepRow[] {
+  return body
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => {
+      const cols = line.split('|').map(c => c.trim());
+      const item = (cols[0] ?? '').replace(/^[\s\-*0-9.)、）]+/, '').trim();
+      const details = (cols[1] ?? '')
+        .split(/[;；]/)
+        .map(d => d.trim())
+        .filter(Boolean);
+      const notes = cols[2] ?? '';
+      return { item, details, notes };
+    })
+    .filter(row => row.item);
+}
+
+// [[rse_actions]] を編集可能アクション表の行として解析する。
+function parseRseActions(content: string): { rest: string; rows: StepRow[] | null } {
+  const match = content.match(RSE_ACTIONS_REGEX);
+  if (!match) {
+    return { rest: content, rows: null };
+  }
+  return { rest: content.replace(RSE_ACTIONS_REGEX, '').trimEnd(), rows: parsePipeRows(match[1]) };
 }
 
 // [[choices]] ブロックを解析する。先頭が「?」の行は質問文、それ以外は選択肢。
@@ -230,9 +259,11 @@ function parseContent(content: string): {
   report: string;
   reportDispatchId: string;
   handoff: HandoffDraft | null;
+  rseActions: StepRow[] | null;
 } {
   const stepsResult = parseSteps(content);
-  const handoffResult = parseHandoff(stepsResult.rest);
+  const rseActionsResult = parseRseActions(stepsResult.rest);
+  const handoffResult = parseHandoff(rseActionsResult.rest);
   const completeResult = parseCompleteAction(handoffResult.rest);
   const reportMatch = completeResult.rest.match(REPORT_REGEX);
   let report = reportMatch ? reportMatch[1].trim() : '';
@@ -259,6 +290,7 @@ function parseContent(content: string): {
     report,
     reportDispatchId,
     handoff: handoffResult.handoff,
+    rseActions: rseActionsResult.rows,
   };
 }
 
@@ -496,6 +528,159 @@ function QuickReplies({ choices }: { choices: string[] }) {
   );
 }
 
+// RSE向けの編集可能ネクストアクション表。RSEがFSEと相談しながら編集・追記し、
+// 確定後に「FSEにリリース」（共有）できる。チェックボックス付き。
+function EditableActionTable({ rows: initialRows }: { rows: StepRow[] }) {
+  const { t } = useTranslation();
+  const { sendMessage, isAgentRunning } = useChatContext();
+  const [rows, setRows] = useState<StepRow[]>(
+    initialRows.length ? initialRows : [{ item: '', details: [], notes: '' }]
+  );
+  const [checked, setChecked] = useState<boolean[]>(initialRows.map(() => false));
+  const [released, setReleased] = useState(false);
+
+  const setItem = (i: number, v: string) =>
+    setRows(prev => prev.map((r, idx) => (idx === i ? { ...r, item: v } : r)));
+  const setDetails = (i: number, v: string) =>
+    setRows(prev =>
+      prev.map((r, idx) =>
+        idx === i ? { ...r, details: v.split('\n').map(s => s.trim()).filter(Boolean) } : r
+      )
+    );
+  const setNotes = (i: number, v: string) =>
+    setRows(prev =>
+      prev.map((r, idx) =>
+        idx === i ? { ...r, notes: v.split('\n').map(s => s.trim()).filter(Boolean).join(';') } : r
+      )
+    );
+  const toggleCheck = (i: number) =>
+    setChecked(prev => {
+      const next = [...prev];
+      next[i] = !next[i];
+      return next;
+    });
+  const addRow = () => {
+    setRows(prev => [...prev, { item: '', details: [], notes: '' }]);
+    setChecked(prev => [...prev, false]);
+  };
+  const removeRow = (i: number) => {
+    setRows(prev => prev.filter((_, idx) => idx !== i));
+    setChecked(prev => prev.filter((_, idx) => idx !== i));
+  };
+
+  const onRelease = () => {
+    const valid = rows.filter(r => r.item.trim());
+    if (valid.length === 0) return;
+    setReleased(true);
+    const pipe = valid
+      .map(r => `${r.item} | ${r.details.join(';')} | ${r.notes}`)
+      .join('\n');
+    sendMessage(`以下のネクストアクションをFSEにリリースしてください。\n${pipe}`);
+  };
+
+  const inputCls =
+    'w-full resize-y rounded border border-border bg-background px-2 py-1 body-secondary text-foreground! focus:border-primary focus:outline-none disabled:opacity-60';
+
+  return (
+    <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
+      <div
+        className={`
+          flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2 caption-01
+          text-muted-foreground
+        `}
+      >
+        <CheckCircle2 className="size-4" />
+        {t('Next actions for FSE (edit & release)')}
+      </div>
+      <div className="flex flex-col gap-3 p-3">
+        {rows.map((row, i) => (
+          <div key={i} className="rounded-md border border-border p-2">
+            <div className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                checked={checked[i] ?? false}
+                disabled={released}
+                onChange={() => toggleCheck(i)}
+                className="mt-2 size-4 shrink-0 accent-primary"
+              />
+              <div className="flex flex-1 flex-col gap-1.5">
+                <input
+                  type="text"
+                  value={row.item}
+                  disabled={released || isAgentRunning}
+                  placeholder={t('Step')}
+                  onChange={e => setItem(i, e.target.value)}
+                  className={cn(inputCls, 'font-medium')}
+                />
+                <textarea
+                  value={row.details.join('\n')}
+                  disabled={released || isAgentRunning}
+                  placeholder={t('Details (one per line)')}
+                  rows={Math.max(2, row.details.length)}
+                  onChange={e => setDetails(i, e.target.value)}
+                  className={inputCls}
+                />
+                <textarea
+                  value={row.notes.split(/[;；]/).filter(Boolean).join('\n')}
+                  disabled={released || isAgentRunning}
+                  placeholder={t('Notes (one per line, prefix ! for safety)')}
+                  rows={1}
+                  onChange={e => setNotes(i, e.target.value)}
+                  className={inputCls}
+                />
+              </div>
+              {!released && (
+                <button
+                  type="button"
+                  onClick={() => removeRow(i)}
+                  className="mt-1 shrink-0 rounded p-1 text-muted-foreground hover:text-destructive"
+                  title={t('Remove row')}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+        {!released && (
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={addRow}
+              disabled={isAgentRunning}
+              className={`
+                rounded-md border border-dashed border-muted-foreground/60 px-3 py-1.5
+                body-secondary text-muted-foreground
+                hover:bg-accent hover:text-accent-foreground
+              `}
+            >
+              {t('+ Add row')}
+            </button>
+            <button
+              type="button"
+              onClick={onRelease}
+              disabled={isAgentRunning}
+              className={cn(
+                `
+                  rounded-md border border-border bg-primary px-4 py-1.5 body-secondary
+                  text-primary-foreground
+                  hover:opacity-90
+                `,
+                'disabled:cursor-not-allowed disabled:opacity-50'
+              )}
+            >
+              {t('Release to FSE')}
+            </button>
+          </div>
+        )}
+        {released && (
+          <div className="caption-01 text-muted-foreground">{t('Released to FSE.')}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // HQ引き継ぎ要約のドラフトカード。FSEが各欄を編集して発行を確定できる（human-in-the-loop）。
 function HandoffDraftCard({ handoff }: { handoff: HandoffDraft }) {
   const { t } = useTranslation();
@@ -635,6 +820,7 @@ export function TextContentPart({ content }: { content: string }) {
     report,
     reportDispatchId,
     handoff,
+    rseActions,
   } = useMemo(() => parseContent(content ? content : ''), [content]);
   return (
     <>
@@ -646,6 +832,7 @@ export function TextContentPart({ content }: { content: string }) {
           completeChoices={completeChoices}
         />
       )}
+      {rseActions && <EditableActionTable rows={rseActions} />}
       {handoff && <HandoffDraftCard handoff={handoff} />}
       {report && <ReportCard report={report} dispatchId={reportDispatchId} />}
       {question && <div className="mt-3 body font-medium">{question}</div>}

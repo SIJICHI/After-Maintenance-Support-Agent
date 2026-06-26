@@ -26,6 +26,7 @@ from agent.tools import (
     exact_lookup,
     get_dispatch_ticket,
     image_search,
+    release_action_plan,
     semantic_search,
     structured_query,
     voice_search,
@@ -237,6 +238,30 @@ class TestDispatch:
     def test_tool_names(self):
         assert create_dispatch_ticket.name == "create_dispatch_ticket"
         assert get_dispatch_ticket.name == "get_dispatch_ticket"
+        assert release_action_plan.name == "release_action_plan"
+
+    def test_release_action_plan_roundtrip(self):
+        created = json.loads(
+            create_dispatch_ticket.invoke({
+                "parent_dispatch_id": "D-20260606-3333",
+                "summary": "s", "error_codes": "", "recommended_parts": "", "open_questions": "",
+            })
+        )
+        did = created["dispatch_id"]
+        plan = "外装損傷の判定 | 湾曲部ゴム全周を接写;気泡発生位置を記録 | !減圧前に水中から引き上げる"
+        released = json.loads(
+            release_action_plan.invoke({"dispatch_id": did, "action_plan": plan})
+        )
+        assert released["status"] == "action_released"
+        fetched = json.loads(get_dispatch_ticket.invoke({"dispatch_id": did}))
+        assert fetched["released_action_plan"] == plan
+        assert fetched["status"] == "action_released"
+
+    def test_release_unknown_dispatch_errors(self):
+        result = json.loads(
+            release_action_plan.invoke({"dispatch_id": "D-00000000-0000-01", "action_plan": "x | y | z"})
+        )
+        assert "error" in result
 
     def test_external_policy_requires_parent(self, monkeypatch):
         # メーカー運用が「外部発番（コールセンター等）」の場合、親番号未指定はエラー
