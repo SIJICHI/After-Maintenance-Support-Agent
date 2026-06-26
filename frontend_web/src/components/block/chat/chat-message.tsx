@@ -1,4 +1,12 @@
-import { memo, useMemo, useState, Component, type ReactNode, type ErrorInfo } from 'react';
+import {
+  memo,
+  useMemo,
+  useState,
+  useRef,
+  Component,
+  type ReactNode,
+  type ErrorInfo,
+} from 'react';
 import {
   User,
   Bot,
@@ -10,6 +18,8 @@ import {
   Loader2,
   AlertTriangle,
   Brain,
+  FileText,
+  Download,
 } from 'lucide-react';
 import { CodeBlock } from '@/components/ui/code-block';
 import { cn } from '@/lib/utils';
@@ -91,6 +101,8 @@ export function UniversalContentPart({ part }: { part: ContentPart }) {
 
 const CHOICES_REGEX = /\[\[choices\]\]\s*([\s\S]*?)\s*\[\[\/choices\]\]/;
 const STEPS_REGEX = /\[\[steps\]\]\s*([\s\S]*?)\s*\[\[\/steps\]\]/;
+const COMPLETE_REGEX = /\[\[complete_action\]\]\s*([\s\S]*?)\s*\[\[\/complete_action\]\]/;
+const REPORT_REGEX = /\[\[report\]\]\s*([\s\S]*?)\s*\[\[\/report\]\]/;
 
 interface StepRow {
   item: string;
@@ -146,20 +158,78 @@ function parseChoices(content: string): { rest: string; question: string; choice
   return { rest, question: questionLines.join(' '), choices: choices.filter(Boolean) };
 }
 
+// [[complete_action]] は「全チェック完了時に表の下へ出す質問＋選択肢」。形式は choices と同じ。
+function parseCompleteAction(content: string): {
+  rest: string;
+  question: string;
+  choices: string[];
+} {
+  const match = content.match(COMPLETE_REGEX);
+  if (!match) {
+    return { rest: content, question: '', choices: [] };
+  }
+  const questionLines: string[] = [];
+  const choices: string[] = [];
+  match[1]
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .forEach(line => {
+      if (/^[?？]/.test(line)) {
+        questionLines.push(line.replace(/^[?？]\s*/, '').trim());
+      } else {
+        choices.push(line.replace(/^[\s\-*0-9.)、）]+/, '').trim());
+      }
+    });
+  const rest = content.replace(COMPLETE_REGEX, '').trimEnd();
+  return { rest, question: questionLines.join(' '), choices: choices.filter(Boolean) };
+}
+
 function parseContent(content: string): {
   text: string;
   steps: StepRow[];
   question: string;
   choices: string[];
+  completeQuestion: string;
+  completeChoices: string[];
+  report: string;
 } {
   const stepsResult = parseSteps(content);
-  const choicesResult = parseChoices(stepsResult.rest);
+  const completeResult = parseCompleteAction(stepsResult.rest);
+  const reportMatch = completeResult.rest.match(REPORT_REGEX);
+  const report = reportMatch ? reportMatch[1].trim() : '';
+  const afterReport = reportMatch
+    ? completeResult.rest.replace(REPORT_REGEX, '').trimEnd()
+    : completeResult.rest;
+  const choicesResult = parseChoices(afterReport);
   return {
     text: choicesResult.rest,
     steps: stepsResult.rows,
     question: choicesResult.question,
     choices: choicesResult.choices,
+    completeQuestion: completeResult.question,
+    completeChoices: completeResult.choices,
+    report,
   };
+}
+
+function downloadAsWord(filename: string, htmlBody: string): void {
+  const html =
+    `<html xmlns:o="urn:schemas-microsoft-com:office:office" ` +
+    `xmlns:w="urn:schemas-microsoft-com:office:word" ` +
+    `xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8">` +
+    `<style>body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:11pt;line-height:1.6;}` +
+    `table{border-collapse:collapse;}td,th{border:1px solid #888;padding:4px 8px;}</style>` +
+    `</head><body>${htmlBody}</body></html>`;
+  const blob = new Blob(['﻿', html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // 内容から安定したキーを作り、チェック状態を localStorage に保存する（リロードしても維持）。
@@ -215,7 +285,15 @@ function NotesCell({ notes }: { notes: string }) {
   );
 }
 
-function StepChecklist({ steps }: { steps: StepRow[] }) {
+function StepChecklist({
+  steps,
+  completeQuestion,
+  completeChoices,
+}: {
+  steps: StepRow[];
+  completeQuestion?: string;
+  completeChoices?: string[];
+}) {
   const { t } = useTranslation();
   const storageKey = useMemo(() => hashKey(steps.map(s => s.item).join('|')), [steps]);
   const [checked, setChecked] = useState<boolean[]>(() => {
@@ -248,6 +326,7 @@ function StepChecklist({ steps }: { steps: StepRow[] }) {
   };
 
   const doneCount = checked.filter(Boolean).length;
+  const allDone = steps.length > 0 && doneCount === steps.length;
 
   return (
     <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
@@ -303,6 +382,12 @@ function StepChecklist({ steps }: { steps: StepRow[] }) {
           </tbody>
         </table>
       </div>
+      {allDone && completeChoices && completeChoices.length > 0 && (
+        <div className="border-t border-border bg-muted/20 p-3">
+          {completeQuestion && <div className="mb-2 body font-medium">{completeQuestion}</div>}
+          <QuickReplies choices={completeChoices} />
+        </div>
+      )}
     </div>
   );
 }
@@ -333,15 +418,65 @@ function QuickReplies({ choices }: { choices: string[] }) {
   );
 }
 
+// 報告書ドラフトのカード表示。Markdownで描画し、その描画HTMLをWord(.doc)として出力する。
+function ReportCard({ report }: { report: string }) {
+  const { t } = useTranslation();
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  const onDownload = () => {
+    const html = bodyRef.current?.innerHTML ?? '';
+    const today = new Date().toISOString().slice(0, 10);
+    downloadAsWord(`service_report_${today}.doc`, html);
+  };
+
+  return (
+    <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
+      <div
+        className={`
+          flex items-center justify-between gap-2 border-b border-border bg-muted/30
+          px-3 py-2 caption-01 text-muted-foreground
+        `}
+      >
+        <span className="flex items-center gap-2">
+          <FileText className="size-4" />
+          {t('Service report draft')}
+        </span>
+        <button
+          type="button"
+          onClick={onDownload}
+          className={`
+            flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5
+            body-secondary transition-colors
+            hover:bg-accent hover:text-accent-foreground
+          `}
+        >
+          <Download className="size-3.5" />
+          {t('Download as Word')}
+        </button>
+      </div>
+      <div ref={bodyRef} className="px-4 py-3">
+        <Markdown>{report}</Markdown>
+      </div>
+    </div>
+  );
+}
+
 export function TextContentPart({ content }: { content: string }) {
-  const { text, steps, question, choices } = useMemo(
+  const { text, steps, question, choices, completeQuestion, completeChoices, report } = useMemo(
     () => parseContent(content ? content : ''),
     [content]
   );
   return (
     <>
       <Markdown>{text}</Markdown>
-      {steps.length > 0 && <StepChecklist steps={steps} />}
+      {steps.length > 0 && (
+        <StepChecklist
+          steps={steps}
+          completeQuestion={completeQuestion}
+          completeChoices={completeChoices}
+        />
+      )}
+      {report && <ReportCard report={report} />}
       {question && <div className="mt-3 body font-medium">{question}</div>}
       {choices.length > 0 && <QuickReplies choices={choices} />}
     </>
