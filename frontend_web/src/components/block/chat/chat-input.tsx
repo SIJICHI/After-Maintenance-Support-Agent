@@ -51,6 +51,8 @@ export function ChatTextInput({
     <div className="relative shrink-0">
       <Textarea
         ref={ref}
+        data-chat-input="true"
+        placeholder={t('Type a message… (choose "Other" to describe a situation not listed)')}
         value={userInput}
         onChange={e => setUserInput(e.target.value)}
         onCompositionStart={() => setIsComposing(true)}

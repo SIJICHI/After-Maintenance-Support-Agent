@@ -393,7 +393,18 @@ function StepChecklist({
 }
 
 function QuickReplies({ choices }: { choices: string[] }) {
-  const { sendMessage, isAgentRunning } = useChatContext();
+  const { sendMessage, setUserInput, isAgentRunning } = useChatContext();
+  const { t } = useTranslation();
+
+  // 「その他」: 選択肢にない内容をFSEが自由記述できるよう、入力欄にフォーカスさせる。
+  const onOther = () => {
+    setUserInput('');
+    requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLTextAreaElement>('[data-chat-input]');
+      el?.focus();
+    });
+  };
+
   return (
     <div className="mt-3 flex flex-wrap gap-2">
       {choices.map((choice, i) => (
@@ -414,6 +425,21 @@ function QuickReplies({ choices }: { choices: string[] }) {
           {choice}
         </button>
       ))}
+      <button
+        type="button"
+        disabled={isAgentRunning}
+        onClick={onOther}
+        className={cn(
+          `
+            rounded-full border border-dashed border-muted-foreground/60 px-4 py-2
+            body-secondary text-muted-foreground transition-colors
+            hover:bg-accent hover:text-accent-foreground
+          `,
+          'disabled:cursor-not-allowed disabled:opacity-50'
+        )}
+      >
+        {t('Other (free text)')}
+      </button>
     </div>
   );
 }
