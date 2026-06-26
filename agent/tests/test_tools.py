@@ -237,3 +237,44 @@ class TestDispatch:
     def test_tool_names(self):
         assert create_dispatch_ticket.name == "create_dispatch_ticket"
         assert get_dispatch_ticket.name == "get_dispatch_ticket"
+
+    def test_external_policy_requires_parent(self, monkeypatch):
+        # メーカー運用が「外部発番（コールセンター等）」の場合、親番号未指定はエラー
+        from agent import dispatch_policy
+
+        monkeypatch.setattr(dispatch_policy, "POLICY", "external")
+        result = json.loads(
+            create_dispatch_ticket.invoke({
+                "parent_dispatch_id": "",
+                "summary": "x", "error_codes": "", "recommended_parts": "", "open_questions": "",
+            })
+        )
+        assert "error" in result
+        assert result.get("needs_parent_dispatch_id") is True
+
+    def test_external_policy_accepts_given_parent(self, monkeypatch):
+        from agent import dispatch_policy
+
+        monkeypatch.setattr(dispatch_policy, "POLICY", "external")
+        result = json.loads(
+            create_dispatch_ticket.invoke({
+                "parent_dispatch_id": "D-20260505-2222",
+                "summary": "x", "error_codes": "", "recommended_parts": "", "open_questions": "",
+            })
+        )
+        assert result["dispatch_id"] == "D-20260505-2222-01"
+
+
+class TestDispatchPolicy:
+    def test_format_child_id(self):
+        from agent import dispatch_policy
+
+        assert dispatch_policy.format_child_id("D-20260101-1234", 1) == "D-20260101-1234-01"
+        assert dispatch_policy.format_child_id("D-20260101-1234", 12) == "D-20260101-1234-12"
+
+    def test_generate_parent_id_format(self):
+        from agent import dispatch_policy
+
+        pid = dispatch_policy.generate_parent_id()
+        assert pid.startswith("D-")
+        assert len(pid.split("-")) == 3

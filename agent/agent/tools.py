@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 import json
-import random
 import re
 from datetime import datetime, timezone
 from functools import lru_cache
@@ -26,6 +25,8 @@ from typing import Annotated
 import numpy as np
 import pandas as pd
 from langchain_core.tools import tool
+
+from agent import dispatch_policy
 
 DATA_DIR = Path(__file__).parent / "data"
 
@@ -350,25 +351,24 @@ def create_dispatch_ticket(
     キャッチアップできるようにする。FSEが「HQに相談する」を選んだときに呼ぶこと。
     """
     store = _load_dispatch_store()
-    parent = parent_dispatch_id.strip()
 
-    if parent:
-        # 既存の親ディスパッチ番号配下に子番号を採番（-01, -02, ...）
-        existing_children = [
-            t for t in store.values() if t.get("parent_dispatch_id") == parent
-        ]
-        seq = len(existing_children) + 1
-        dispatch_id = f"{parent}-{seq:02d}"
-        while dispatch_id in store:
-            seq += 1
-            dispatch_id = f"{parent}-{seq:02d}"
-    else:
-        # 親番号が不明な場合のみ、暫定の新規番号を採番（本来はクライアントの管理システムが発番）
-        today = datetime.now(timezone.utc).strftime("%Y%m%d")
-        parent = f"D-{today}-{random.randint(1000, 9999)}"
-        while parent in store:
-            parent = f"D-{today}-{random.randint(1000, 9999)}"
-        dispatch_id = f"{parent}-01"
+    # 発番ポリシー（メーカー運用の差異）は dispatch_policy に集約。
+    try:
+        parent = dispatch_policy.resolve_parent_id(parent_dispatch_id)
+    except dispatch_policy.ParentDispatchRequiredError as exc:
+        return json.dumps(
+            {"error": str(exc), "needs_parent_dispatch_id": True}, ensure_ascii=False
+        )
+
+    # 親ディスパッチ番号配下に子番号を採番（-01, -02, ...）
+    existing_children = [
+        t for t in store.values() if t.get("parent_dispatch_id") == parent
+    ]
+    seq = len(existing_children) + 1
+    dispatch_id = dispatch_policy.format_child_id(parent, seq)
+    while dispatch_id in store:
+        seq += 1
+        dispatch_id = dispatch_policy.format_child_id(parent, seq)
 
     ticket = {
         "dispatch_id": dispatch_id,
