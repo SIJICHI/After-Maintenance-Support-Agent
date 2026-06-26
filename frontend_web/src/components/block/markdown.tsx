@@ -82,7 +82,10 @@ export const MARKDOWN_COMPONENTS: MarkdownComponents = {
     <div className="my-2 flex flex-1 flex-col overflow-hidden rounded-lg border border-border bg-background">
       <table
         className={cn(
-          'h-fit w-full table-fixed border-separate border-spacing-0 overflow-auto rounded-lg',
+          `
+            h-fit w-full table-fixed border-separate border-spacing-0 overflow-auto rounded-lg
+            [&_td:first-child]:w-40 [&_th:first-child]:w-40
+          `,
           className
         )}
         {...props}

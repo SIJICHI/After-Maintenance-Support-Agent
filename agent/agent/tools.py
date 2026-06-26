@@ -454,3 +454,55 @@ def release_action_plan(
         ensure_ascii=False,
         indent=2,
     )
+
+
+@tool
+def release_dispatch_briefing(
+    dispatch_id: Annotated[
+        str, "対象案件のディスパッチ番号（コールセンター発番の親番号。例: D-20260626-7765）"
+    ],
+    symptom: Annotated[str, "顧客から申告された症状・状況"],
+    diagnosis: Annotated[str, "電話トリアージでの推定原因・所見"],
+    initial_response: Annotated[str, "顧客に案内・実施済みの初動対応（使用中止・隔離等）"],
+    parts_to_bring: Annotated[str, "FSEが持参・準備すべき部品/治具（;区切り）"],
+    focus_points: Annotated[str, "現地でFSEに重点的に確認・実施させたい指示（;区切り）"],
+    notes: Annotated[str, "申し送り・補足（顧客連絡先や訪問条件など）"],
+) -> str:
+    """RSEがFSE派遣を判断した際、担当営業所のFSEへ引き継ぐ「派遣ブリーフィング」を、
+    ディスパッチ番号に紐づけてリリース（共有）する。FSEは同じ番号で派遣情報を受領できる。
+    案件番号がストアに未登録（コールセンター発番のみ）の場合は新規に登録する。
+    """
+    store = _load_dispatch_store()
+    did = dispatch_id.strip()
+    ticket = store.get(did)
+    if ticket is None:
+        ticket = {
+            "dispatch_id": did,
+            "parent_dispatch_id": did,
+            "type": "call_center_dispatch",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+    ticket["dispatch_briefing"] = {
+        "symptom": symptom,
+        "diagnosis": diagnosis,
+        "initial_response": initial_response,
+        "parts_to_bring": parts_to_bring,
+        "focus_points": focus_points,
+        "notes": notes,
+    }
+    ticket["briefing_released_at"] = datetime.now(timezone.utc).isoformat()
+    ticket["status"] = "fse_dispatched"
+    store[did] = ticket
+    _save_dispatch_store()
+    return json.dumps(
+        {
+            "dispatch_id": did,
+            "status": "fse_dispatched",
+            "message": (
+                f"派遣ブリーフィングをディスパッチ番号 {did} にリリースしました。"
+                "担当営業所のFSEはこの番号で派遣情報を受領できます。"
+            ),
+        },
+        ensure_ascii=False,
+        indent=2,
+    )

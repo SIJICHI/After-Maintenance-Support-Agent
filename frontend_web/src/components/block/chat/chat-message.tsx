@@ -106,6 +106,7 @@ const REPORT_REGEX = /\[\[report\]\]\s*([\s\S]*?)\s*\[\[\/report\]\]/;
 const HANDOFF_REGEX = /\[\[handoff_draft\]\]\s*([\s\S]*?)\s*\[\[\/handoff_draft\]\]/;
 const RSE_ACTIONS_REGEX = /\[\[rse_actions\]\]\s*([\s\S]*?)\s*\[\[\/rse_actions\]\]/;
 const HEARING_REGEX = /\[\[hearing\]\]\s*([\s\S]*?)\s*\[\[\/hearing\]\]/;
+const BRIEFING_REGEX = /\[\[dispatch_briefing\]\]\s*([\s\S]*?)\s*\[\[\/dispatch_briefing\]\]/;
 
 interface StepRow {
   item: string;
@@ -173,6 +174,48 @@ function parseHearing(content: string): { rest: string; rows: StepRow[] | null }
     return { rest: content, rows: null };
   }
   return { rest: content.replace(HEARING_REGEX, '').trimEnd(), rows: parsePipeRows(match[1]) };
+}
+
+interface DispatchBriefing {
+  dispatch_id: string;
+  symptom: string;
+  diagnosis: string;
+  initial_response: string;
+  parts_to_bring: string;
+  focus_points: string;
+  notes: string;
+}
+
+const BRIEFING_KEYS: (keyof DispatchBriefing)[] = [
+  'dispatch_id',
+  'symptom',
+  'diagnosis',
+  'initial_response',
+  'parts_to_bring',
+  'focus_points',
+  'notes',
+];
+
+// [[dispatch_briefing]] を「キー: 値」行として解析する。
+function parseBriefing(content: string): { rest: string; briefing: DispatchBriefing | null } {
+  const match = content.match(BRIEFING_REGEX);
+  if (!match) {
+    return { rest: content, briefing: null };
+  }
+  const fields: Record<string, string> = {};
+  match[1].split('\n').forEach(line => {
+    const m = line.match(
+      /^\s*(dispatch_id|symptom|diagnosis|initial_response|parts_to_bring|focus_points|notes)\s*[:：]\s*(.*)$/
+    );
+    if (m) {
+      fields[m[1]] = m[2].trim();
+    }
+  });
+  const briefing = BRIEFING_KEYS.reduce((acc, k) => {
+    acc[k] = fields[k] ?? '';
+    return acc;
+  }, {} as DispatchBriefing);
+  return { rest: content.replace(BRIEFING_REGEX, '').trimEnd(), briefing };
 }
 
 // [[choices]] ブロックを解析する。先頭が「?」の行は質問文、それ以外は選択肢。
@@ -271,11 +314,13 @@ function parseContent(content: string): {
   handoff: HandoffDraft | null;
   rseActions: StepRow[] | null;
   hearing: StepRow[] | null;
+  briefing: DispatchBriefing | null;
 } {
   const stepsResult = parseSteps(content);
   const rseActionsResult = parseRseActions(stepsResult.rest);
   const hearingResult = parseHearing(rseActionsResult.rest);
-  const handoffResult = parseHandoff(hearingResult.rest);
+  const briefingResult = parseBriefing(hearingResult.rest);
+  const handoffResult = parseHandoff(briefingResult.rest);
   const completeResult = parseCompleteAction(handoffResult.rest);
   const reportMatch = completeResult.rest.match(REPORT_REGEX);
   let report = reportMatch ? reportMatch[1].trim() : '';
@@ -304,6 +349,7 @@ function parseContent(content: string): {
     handoff: handoffResult.handoff,
     rseActions: rseActionsResult.rows,
     hearing: hearingResult.rows,
+    briefing: briefingResult.briefing,
   };
 }
 
@@ -545,6 +591,97 @@ function QuickReplies({ choices }: { choices: string[] }) {
       >
         {t('その他（自由記述）')}
       </button>
+    </div>
+  );
+}
+
+// FSE派遣ブリーフィングの編集カード。RSEが内容を編集し、担当営業所のFSEへリリースできる。
+function DispatchBriefingCard({ briefing }: { briefing: DispatchBriefing }) {
+  const { t } = useTranslation();
+  const { sendMessage, isAgentRunning } = useChatContext();
+  const [fields, setFields] = useState<DispatchBriefing>(briefing);
+  const [released, setReleased] = useState(false);
+
+  const update = (key: keyof DispatchBriefing, value: string) =>
+    setFields(prev => ({ ...prev, [key]: value }));
+
+  const onRelease = () => {
+    setReleased(true);
+    const msg =
+      '以下の派遣ブリーフィングをFSEにリリースしてください。\n' +
+      BRIEFING_KEYS.map(k => `${k}: ${fields[k]}`).join('\n');
+    sendMessage(msg);
+  };
+
+  const rows: { key: keyof DispatchBriefing; label: string; multiline: boolean }[] = [
+    { key: 'dispatch_id', label: t('Dispatch No.'), multiline: false },
+    { key: 'symptom', label: t('Reported symptom'), multiline: true },
+    { key: 'diagnosis', label: t('Estimated cause / findings'), multiline: true },
+    { key: 'initial_response', label: t('Initial response done'), multiline: true },
+    { key: 'parts_to_bring', label: t('Parts to bring (; separated)'), multiline: true },
+    { key: 'focus_points', label: t('Focus points for FSE (; separated)'), multiline: true },
+    { key: 'notes', label: t('Notes'), multiline: true },
+  ];
+
+  const inputCls =
+    'w-full resize-y rounded-md border border-border bg-background px-2 py-1.5 body-secondary text-foreground! focus:border-primary focus:outline-none disabled:opacity-60';
+
+  return (
+    <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
+      <div
+        className={`
+          flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2 caption-01
+          text-muted-foreground
+        `}
+      >
+        <FileText className="size-4" />
+        {t('FSE dispatch briefing (review & edit before releasing)')}
+      </div>
+      <div className="flex flex-col gap-3 p-3">
+        {rows.map(({ key, label, multiline }) => (
+          <label key={key} className="flex flex-col gap-1">
+            <span className="caption-01 text-muted-foreground">{label}</span>
+            {multiline ? (
+              <textarea
+                value={fields[key]}
+                disabled={released || isAgentRunning}
+                rows={2}
+                onChange={e => update(key, e.target.value)}
+                className={inputCls}
+              />
+            ) : (
+              <input
+                type="text"
+                value={fields[key]}
+                disabled={released || isAgentRunning}
+                onChange={e => update(key, e.target.value)}
+                className={inputCls}
+              />
+            )}
+          </label>
+        ))}
+        {!released ? (
+          <div>
+            <button
+              type="button"
+              disabled={isAgentRunning}
+              onClick={onRelease}
+              className={cn(
+                `
+                  rounded-md border border-border bg-primary px-4 py-2 body-secondary
+                  text-primary-foreground
+                  hover:opacity-90
+                `,
+                'disabled:cursor-not-allowed disabled:opacity-50'
+              )}
+            >
+              {t('Release dispatch briefing to FSE')}
+            </button>
+          </div>
+        ) : (
+          <div className="caption-01 text-muted-foreground">{t('Released to FSE.')}</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -827,6 +964,7 @@ export function TextContentPart({ content }: { content: string }) {
     handoff,
     rseActions,
     hearing,
+    briefing,
   } = useMemo(() => parseContent(content ? content : ''), [content]);
   return (
     <>
@@ -848,6 +986,7 @@ export function TextContentPart({ content }: { content: string }) {
         />
       )}
       {rseActions && <EditableActionTable rows={rseActions} />}
+      {briefing && <DispatchBriefingCard briefing={briefing} />}
       {handoff && <HandoffDraftCard handoff={handoff} />}
       {report && <ReportCard report={report} dispatchId={reportDispatchId} />}
       {question && <div className="mt-3 body font-medium">{question}</div>}

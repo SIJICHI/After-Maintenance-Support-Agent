@@ -27,6 +27,7 @@ from agent.tools import (
     get_dispatch_ticket,
     image_search,
     release_action_plan,
+    release_dispatch_briefing,
     semantic_search,
     structured_query,
     voice_search,
@@ -262,6 +263,25 @@ class TestDispatch:
             release_action_plan.invoke({"dispatch_id": "D-00000000-0000-01", "action_plan": "x | y | z"})
         )
         assert "error" in result
+
+    def test_release_dispatch_briefing_upsert_and_get(self):
+        # コールセンター発番のみで未登録の番号でも、ブリーフィングのリリースで新規登録される
+        did = "D-20260707-4242"
+        released = json.loads(
+            release_dispatch_briefing.invoke({
+                "dispatch_id": did,
+                "symptom": "送水不良",
+                "diagnosis": "送水ポンプ劣化疑い",
+                "initial_response": "使用中止を案内",
+                "parts_to_bring": "送水ポンプ;Oリング",
+                "focus_points": "防水点検;送水経路確認",
+                "notes": "午前訪問希望",
+            })
+        )
+        assert released["status"] == "fse_dispatched"
+        fetched = json.loads(get_dispatch_ticket.invoke({"dispatch_id": did}))
+        assert fetched["dispatch_briefing"]["symptom"] == "送水不良"
+        assert fetched["dispatch_briefing"]["parts_to_bring"] == "送水ポンプ;Oリング"
 
     def test_external_policy_requires_parent(self, monkeypatch):
         # メーカー運用が「外部発番（コールセンター等）」の場合、親番号未指定はエラー
