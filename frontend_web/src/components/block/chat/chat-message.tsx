@@ -173,7 +173,7 @@ function hashKey(input: string): string {
 
 // 注意事項セル。各項目はセミコロン区切り。先頭が「!」の項目は安全重要事項として
 // 警告アイコン＋赤系で強調する。
-function NotesCell({ notes, dimmed }: { notes: string; dimmed: boolean }) {
+function NotesCell({ notes }: { notes: string }) {
   const items = notes
     .split(/[;；]/)
     .map(n => n.trim())
@@ -194,10 +194,9 @@ function NotesCell({ notes, dimmed }: { notes: string; dimmed: boolean }) {
               key={i}
               className={cn(
                 `
-                  flex items-start gap-1.5 rounded border border-red-400/50
-                  bg-red-500/15 px-2 py-1 text-red-400
-                `,
-                dimmed && 'opacity-60'
+                  flex items-start gap-1.5 rounded border border-yellow-400/50
+                  bg-yellow-500/15 px-2 py-1 text-yellow-300
+                `
               )}
             >
               <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
@@ -282,15 +281,10 @@ function StepChecklist({ steps }: { steps: StepRow[] }) {
                     className="mt-0.5 size-4 accent-primary"
                   />
                 </td>
-                <td
-                  className={cn(
-                    'px-3 py-2 font-medium',
-                    checked[i] && 'text-muted-foreground line-through'
-                  )}
-                >
+                <td className={cn('px-3 py-2 font-medium', checked[i] && 'line-through')}>
                   {row.item}
                 </td>
-                <td className={cn('px-3 py-2', checked[i] && 'text-muted-foreground')}>
+                <td className="px-3 py-2">
                   {row.details.length > 0 ? (
                     <ul className="list-disc space-y-0.5 pl-4">
                       {row.details.map((d, j) => (
@@ -301,8 +295,8 @@ function StepChecklist({ steps }: { steps: StepRow[] }) {
                     <span className="text-muted-foreground">—</span>
                   )}
                 </td>
-                <td className={cn('px-3 py-2', checked[i] && 'text-muted-foreground')}>
-                  <NotesCell notes={row.notes} dimmed={!!checked[i]} />
+                <td className="px-3 py-2">
+                  <NotesCell notes={row.notes} />
                 </td>
               </tr>
             ))}
