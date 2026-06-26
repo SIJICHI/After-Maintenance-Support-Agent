@@ -103,6 +103,7 @@ const CHOICES_REGEX = /\[\[choices\]\]\s*([\s\S]*?)\s*\[\[\/choices\]\]/;
 const STEPS_REGEX = /\[\[steps\]\]\s*([\s\S]*?)\s*\[\[\/steps\]\]/;
 const COMPLETE_REGEX = /\[\[complete_action\]\]\s*([\s\S]*?)\s*\[\[\/complete_action\]\]/;
 const REPORT_REGEX = /\[\[report\]\]\s*([\s\S]*?)\s*\[\[\/report\]\]/;
+const HANDOFF_REGEX = /\[\[handoff_draft\]\]\s*([\s\S]*?)\s*\[\[\/handoff_draft\]\]/;
 
 interface StepRow {
   item: string;
@@ -185,6 +186,36 @@ function parseCompleteAction(content: string): {
   return { rest, question: questionLines.join(' '), choices: choices.filter(Boolean) };
 }
 
+interface HandoffDraft {
+  summary: string;
+  error_codes: string;
+  recommended_parts: string;
+  open_questions: string;
+}
+
+// [[handoff_draft]] を「キー: 値」行として解析する。
+function parseHandoff(content: string): { rest: string; handoff: HandoffDraft | null } {
+  const match = content.match(HANDOFF_REGEX);
+  if (!match) {
+    return { rest: content, handoff: null };
+  }
+  const fields: Record<string, string> = {};
+  match[1].split('\n').forEach(line => {
+    const m = line.match(/^\s*(summary|error_codes|recommended_parts|open_questions)\s*[:：]\s*(.*)$/);
+    if (m) {
+      fields[m[1]] = m[2].trim();
+    }
+  });
+  const handoff: HandoffDraft = {
+    summary: fields.summary ?? '',
+    error_codes: fields.error_codes ?? '',
+    recommended_parts: fields.recommended_parts ?? '',
+    open_questions: fields.open_questions ?? '',
+  };
+  const rest = content.replace(HANDOFF_REGEX, '').trimEnd();
+  return { rest, handoff };
+}
+
 function parseContent(content: string): {
   text: string;
   steps: StepRow[];
@@ -194,9 +225,11 @@ function parseContent(content: string): {
   completeChoices: string[];
   report: string;
   reportDispatchId: string;
+  handoff: HandoffDraft | null;
 } {
   const stepsResult = parseSteps(content);
-  const completeResult = parseCompleteAction(stepsResult.rest);
+  const handoffResult = parseHandoff(stepsResult.rest);
+  const completeResult = parseCompleteAction(handoffResult.rest);
   const reportMatch = completeResult.rest.match(REPORT_REGEX);
   let report = reportMatch ? reportMatch[1].trim() : '';
   // 報告書先頭のメタ行 "dispatch_id: D-..." を抽出し、表示からは除く（ファイル名に使う）。
@@ -221,6 +254,7 @@ function parseContent(content: string): {
     completeChoices: completeResult.choices,
     report,
     reportDispatchId,
+    handoff: handoffResult.handoff,
   };
 }
 
@@ -455,6 +489,86 @@ function QuickReplies({ choices }: { choices: string[] }) {
   );
 }
 
+// HQ引き継ぎ要約のドラフトカード。FSEが各欄を編集して発行を確定できる（human-in-the-loop）。
+function HandoffDraftCard({ handoff }: { handoff: HandoffDraft }) {
+  const { t } = useTranslation();
+  const { sendMessage, isAgentRunning } = useChatContext();
+  const [fields, setFields] = useState<HandoffDraft>(handoff);
+  const [issued, setIssued] = useState(false);
+
+  const update = (key: keyof HandoffDraft, value: string) => {
+    setFields(prev => ({ ...prev, [key]: value }));
+  };
+
+  const onIssue = () => {
+    setIssued(true);
+    const msg =
+      '以下の内容でディスパッチ票を発行してください。\n' +
+      `summary: ${fields.summary}\n` +
+      `error_codes: ${fields.error_codes}\n` +
+      `recommended_parts: ${fields.recommended_parts}\n` +
+      `open_questions: ${fields.open_questions}`;
+    sendMessage(msg);
+  };
+
+  const rows: { key: keyof HandoffDraft; label: string }[] = [
+    { key: 'summary', label: t('Summary') },
+    { key: 'error_codes', label: t('Error codes') },
+    { key: 'recommended_parts', label: t('Recommended parts') },
+    { key: 'open_questions', label: t('Open questions') },
+  ];
+
+  return (
+    <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
+      <div
+        className={`
+          flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2 caption-01
+          text-muted-foreground
+        `}
+      >
+        <FileText className="size-4" />
+        {t('HQ handoff summary (review & edit before issuing)')}
+      </div>
+      <div className="flex flex-col gap-3 p-3">
+        {rows.map(({ key, label }) => (
+          <label key={key} className="flex flex-col gap-1">
+            <span className="caption-01 text-muted-foreground">{label}</span>
+            <textarea
+              value={fields[key]}
+              disabled={issued || isAgentRunning}
+              onChange={e => update(key, e.target.value)}
+              rows={key === 'summary' || key === 'open_questions' ? 3 : 1}
+              className={`
+                w-full resize-y rounded-md border border-border bg-background px-2 py-1.5
+                body-secondary
+                focus:border-primary focus:outline-none
+                disabled:opacity-60
+              `}
+            />
+          </label>
+        ))}
+        <div>
+          <button
+            type="button"
+            disabled={issued || isAgentRunning}
+            onClick={onIssue}
+            className={cn(
+              `
+                rounded-md border border-border bg-primary px-4 py-2 body-secondary
+                text-primary-foreground transition-colors
+                hover:opacity-90
+              `,
+              'disabled:cursor-not-allowed disabled:opacity-50'
+            )}
+          >
+            {issued ? t('Issuing…') : t('Issue dispatch ticket with this content')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // 報告書ドラフトのカード表示。Markdownで描画し、その描画HTMLをWord(.doc)として出力する。
 function ReportCard({ report, dispatchId }: { report: string; dispatchId?: string }) {
   const { t } = useTranslation();
@@ -511,6 +625,7 @@ export function TextContentPart({ content }: { content: string }) {
     completeChoices,
     report,
     reportDispatchId,
+    handoff,
   } = useMemo(() => parseContent(content ? content : ''), [content]);
   return (
     <>
@@ -522,6 +637,7 @@ export function TextContentPart({ content }: { content: string }) {
           completeChoices={completeChoices}
         />
       )}
+      {handoff && <HandoffDraftCard handoff={handoff} />}
       {report && <ReportCard report={report} dispatchId={reportDispatchId} />}
       {question && <div className="mt-3 body font-medium">{question}</div>}
       {choices.length > 0 && <QuickReplies choices={choices} />}
