@@ -98,19 +98,6 @@ interface StepRow {
   notes: string;
 }
 
-function parseBlock(content: string, regex: RegExp): { rest: string; items: string[] } {
-  const match = content.match(regex);
-  if (!match) {
-    return { rest: content, items: [] };
-  }
-  const items = match[1]
-    .split('\n')
-    .map(line => line.replace(/^[\s\-*0-9.)、）]+/, '').trim())
-    .filter(Boolean);
-  const rest = content.replace(regex, '').trimEnd();
-  return { rest, items };
-}
-
 // [[steps]] ブロックを「作業項目 | 詳細1;詳細2 | 注意事項」のパイプ区切り行として解析する。
 function parseSteps(content: string): { rest: string; rows: StepRow[] } {
   const match = content.match(STEPS_REGEX);
@@ -136,10 +123,43 @@ function parseSteps(content: string): { rest: string; rows: StepRow[] } {
   return { rest, rows };
 }
 
-function parseContent(content: string): { text: string; steps: StepRow[]; choices: string[] } {
+// [[choices]] ブロックを解析する。先頭が「?」の行は質問文、それ以外は選択肢。
+function parseChoices(content: string): { rest: string; question: string; choices: string[] } {
+  const match = content.match(CHOICES_REGEX);
+  if (!match) {
+    return { rest: content, question: '', choices: [] };
+  }
+  const questionLines: string[] = [];
+  const choices: string[] = [];
+  match[1]
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .forEach(line => {
+      if (/^[?？]/.test(line)) {
+        questionLines.push(line.replace(/^[?？]\s*/, '').trim());
+      } else {
+        choices.push(line.replace(/^[\s\-*0-9.)、）]+/, '').trim());
+      }
+    });
+  const rest = content.replace(CHOICES_REGEX, '').trimEnd();
+  return { rest, question: questionLines.join(' '), choices: choices.filter(Boolean) };
+}
+
+function parseContent(content: string): {
+  text: string;
+  steps: StepRow[];
+  question: string;
+  choices: string[];
+} {
   const stepsResult = parseSteps(content);
-  const choicesResult = parseBlock(stepsResult.rest, CHOICES_REGEX);
-  return { text: choicesResult.rest, steps: stepsResult.rows, choices: choicesResult.items };
+  const choicesResult = parseChoices(stepsResult.rest);
+  return {
+    text: choicesResult.rest,
+    steps: stepsResult.rows,
+    question: choicesResult.question,
+    choices: choicesResult.choices,
+  };
 }
 
 // 内容から安定したキーを作り、チェック状態を localStorage に保存する（リロードしても維持）。
@@ -174,8 +194,8 @@ function NotesCell({ notes, dimmed }: { notes: string; dimmed: boolean }) {
               key={i}
               className={cn(
                 `
-                  flex items-start gap-1.5 rounded border border-destructive/40
-                  bg-destructive/10 px-2 py-1 text-destructive
+                  flex items-start gap-1.5 rounded border border-red-400/50
+                  bg-red-500/15 px-2 py-1 text-red-400
                 `,
                 dimmed && 'opacity-60'
               )}
@@ -320,11 +340,15 @@ function QuickReplies({ choices }: { choices: string[] }) {
 }
 
 export function TextContentPart({ content }: { content: string }) {
-  const { text, steps, choices } = useMemo(() => parseContent(content ? content : ''), [content]);
+  const { text, steps, question, choices } = useMemo(
+    () => parseContent(content ? content : ''),
+    [content]
+  );
   return (
     <>
       <Markdown>{text}</Markdown>
       {steps.length > 0 && <StepChecklist steps={steps} />}
+      {question && <div className="mt-3 body font-medium">{question}</div>}
       {choices.length > 0 && <QuickReplies choices={choices} />}
     </>
   );
