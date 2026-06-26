@@ -169,21 +169,53 @@ class TestImageSearch:
 
 
 class TestDispatch:
-    def test_create_returns_dispatch_id(self):
+    def test_child_number_under_parent(self):
         result = json.loads(
             create_dispatch_ticket.invoke({
+                "parent_dispatch_id": "D-20260101-1234",
                 "summary": "湾曲抵抗の切り分け中。CLN系疑い。",
                 "error_codes": "INS-003",
                 "recommended_parts": "湾曲部ゴム",
                 "open_questions": "リーク箇所未特定",
             })
         )
-        assert result["dispatch_id"].startswith("D-")
+        # 子番号は親番号配下に -01 形式で採番される
+        assert result["dispatch_id"] == "D-20260101-1234-01"
+        assert result["parent_dispatch_id"] == "D-20260101-1234"
         assert result["status"] == "open"
+
+    def test_sequential_children_increment(self):
+        parent = "D-20260202-5678"
+        first = json.loads(
+            create_dispatch_ticket.invoke({
+                "parent_dispatch_id": parent, "summary": "a",
+                "error_codes": "", "recommended_parts": "", "open_questions": "",
+            })
+        )
+        second = json.loads(
+            create_dispatch_ticket.invoke({
+                "parent_dispatch_id": parent, "summary": "b",
+                "error_codes": "", "recommended_parts": "", "open_questions": "",
+            })
+        )
+        assert first["dispatch_id"] == f"{parent}-01"
+        assert second["dispatch_id"] == f"{parent}-02"
+
+    def test_empty_parent_generates_provisional(self):
+        result = json.loads(
+            create_dispatch_ticket.invoke({
+                "parent_dispatch_id": "",
+                "summary": "親番号不明", "error_codes": "", "recommended_parts": "", "open_questions": "",
+            })
+        )
+        # 親不明なら暫定の親番号を採番し、その配下に -01
+        assert result["dispatch_id"].endswith("-01")
+        assert result["parent_dispatch_id"].startswith("D-")
 
     def test_create_then_get_roundtrip(self):
         created = json.loads(
             create_dispatch_ticket.invoke({
+                "parent_dispatch_id": "D-20260303-9999",
                 "summary": "送水不良の切り分け中",
                 "error_codes": "AWS-001",
                 "recommended_parts": "送水ポンプ",
@@ -193,24 +225,14 @@ class TestDispatch:
         dispatch_id = created["dispatch_id"]
         fetched = json.loads(get_dispatch_ticket.invoke({"dispatch_id": dispatch_id}))
         assert fetched["dispatch_id"] == dispatch_id
+        assert fetched["parent_dispatch_id"] == "D-20260303-9999"
         assert fetched["summary"] == "送水不良の切り分け中"
         assert fetched["error_codes"] == "AWS-001"
         assert fetched["open_questions"] == "ポンプ単体故障か配管閉塞か未確定"
 
     def test_get_unknown_returns_error(self):
-        result = json.loads(get_dispatch_ticket.invoke({"dispatch_id": "D-99999999-0000"}))
+        result = json.loads(get_dispatch_ticket.invoke({"dispatch_id": "D-99999999-0000-99"}))
         assert "error" in result
-
-    def test_dispatch_ids_are_unique(self):
-        ids = set()
-        for _ in range(5):
-            r = json.loads(
-                create_dispatch_ticket.invoke({
-                    "summary": "test", "error_codes": "", "recommended_parts": "", "open_questions": "",
-                })
-            )
-            ids.add(r["dispatch_id"])
-        assert len(ids) == 5
 
     def test_tool_names(self):
         assert create_dispatch_ticket.name == "create_dispatch_ticket"

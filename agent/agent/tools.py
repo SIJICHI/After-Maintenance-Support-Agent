@@ -328,6 +328,12 @@ def _save_dispatch_store() -> None:
 
 @tool
 def create_dispatch_ticket(
+    parent_dispatch_id: Annotated[
+        str,
+        "FSEが現地対応している案件の既存ディスパッチ番号（例: D-20260625-1234）。"
+        "1案件＝1ディスパッチ番号で運用され、その配下に相談の子番号を採番する。"
+        "FSEが対応中の案件番号が分かっている場合は必ず指定する。不明な場合のみ空文字列''。",
+    ],
     summary: Annotated[
         str,
         "FSEとエージェントのやり取りの要約。発生症状・実施した切り分け/作業・確認できた結果・"
@@ -337,19 +343,37 @@ def create_dispatch_ticket(
     recommended_parts: Annotated[str, "推定される推奨部品（カンマ区切り。なければ空文字列''）"],
     open_questions: Annotated[str, "RSEに引き継ぐ未解決の確認事項・困りごと（なければ空文字列''）"],
 ) -> str:
-    """現場のFSEが切り分け・修理に行き詰まった際、HQのリモートサポートエンジニア（RSE）へ
-    エスカレーションするためのディスパッチ票を発行する。会話内容を要約して一意のディスパッチ番号に
-    紐づけて保存し、RSEが get_dispatch_ticket で即座に状況をキャッチアップできるようにする。
-    FSEが「HQに相談する」を選んだときに呼ぶこと。
+    """現場のFSEが切り分け・修理に行き詰まった際、HQのリモートサポートエンジニア（RSE）への
+    相談票を発行する。実務では1案件＝1ディスパッチ番号で運用されるため、新しい独立番号は作らず、
+    既存の親ディスパッチ番号（parent_dispatch_id）の配下に「子番号」（例: D-...-01）を採番する。
+    会話内容を要約して子番号に紐づけて保存し、RSEが get_dispatch_ticket で即座に状況を
+    キャッチアップできるようにする。FSEが「HQに相談する」を選んだときに呼ぶこと。
     """
     store = _load_dispatch_store()
-    today = datetime.now(timezone.utc).strftime("%Y%m%d")
-    dispatch_id = f"D-{today}-{random.randint(1000, 9999)}"
-    while dispatch_id in store:
-        dispatch_id = f"D-{today}-{random.randint(1000, 9999)}"
+    parent = parent_dispatch_id.strip()
+
+    if parent:
+        # 既存の親ディスパッチ番号配下に子番号を採番（-01, -02, ...）
+        existing_children = [
+            t for t in store.values() if t.get("parent_dispatch_id") == parent
+        ]
+        seq = len(existing_children) + 1
+        dispatch_id = f"{parent}-{seq:02d}"
+        while dispatch_id in store:
+            seq += 1
+            dispatch_id = f"{parent}-{seq:02d}"
+    else:
+        # 親番号が不明な場合のみ、暫定の新規番号を採番（本来はクライアントの管理システムが発番）
+        today = datetime.now(timezone.utc).strftime("%Y%m%d")
+        parent = f"D-{today}-{random.randint(1000, 9999)}"
+        while parent in store:
+            parent = f"D-{today}-{random.randint(1000, 9999)}"
+        dispatch_id = f"{parent}-01"
 
     ticket = {
         "dispatch_id": dispatch_id,
+        "parent_dispatch_id": parent,
+        "type": "rse_consultation",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "status": "open",
         "summary": summary,
@@ -362,10 +386,11 @@ def create_dispatch_ticket(
     return json.dumps(
         {
             "dispatch_id": dispatch_id,
+            "parent_dispatch_id": parent,
             "status": "open",
             "message": (
-                f"ディスパッチ票 {dispatch_id} を発行しました。"
-                "この番号をHQのリモートサポートエンジニア（RSE）に伝えてください。"
+                f"案件 {parent} の相談として、子番号 {dispatch_id} を採番しました。"
+                f"この番号 {dispatch_id} をHQのリモートサポートエンジニア（RSE）に伝えてください。"
                 "RSEはこの番号でこれまでの対応内容を即座に確認できます。"
             ),
         },

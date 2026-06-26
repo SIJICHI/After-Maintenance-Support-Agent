@@ -187,6 +187,7 @@ function parseCompleteAction(content: string): {
 }
 
 interface HandoffDraft {
+  parent_dispatch_id: string;
   summary: string;
   error_codes: string;
   recommended_parts: string;
@@ -201,12 +202,15 @@ function parseHandoff(content: string): { rest: string; handoff: HandoffDraft | 
   }
   const fields: Record<string, string> = {};
   match[1].split('\n').forEach(line => {
-    const m = line.match(/^\s*(summary|error_codes|recommended_parts|open_questions)\s*[:：]\s*(.*)$/);
+    const m = line.match(
+      /^\s*(parent_dispatch_id|summary|error_codes|recommended_parts|open_questions)\s*[:：]\s*(.*)$/
+    );
     if (m) {
       fields[m[1]] = m[2].trim();
     }
   });
   const handoff: HandoffDraft = {
+    parent_dispatch_id: fields.parent_dispatch_id ?? '',
     summary: fields.summary ?? '',
     error_codes: fields.error_codes ?? '',
     recommended_parts: fields.recommended_parts ?? '',
@@ -507,6 +511,7 @@ function HandoffDraftCard({ handoff }: { handoff: HandoffDraft }) {
     setIssued(true);
     const msg =
       '以下の内容でディスパッチ票を発行してください。\n' +
+      `parent_dispatch_id: ${fields.parent_dispatch_id}\n` +
       `summary: ${fields.summary}\n` +
       `error_codes: ${fields.error_codes}\n` +
       `recommended_parts: ${fields.recommended_parts}\n` +
@@ -515,6 +520,7 @@ function HandoffDraftCard({ handoff }: { handoff: HandoffDraft }) {
   };
 
   const rows: { key: keyof HandoffDraft; label: string }[] = [
+    { key: 'parent_dispatch_id', label: t('Case dispatch No. (parent)') },
     { key: 'summary', label: t('Summary') },
     { key: 'error_codes', label: t('Error codes') },
     { key: 'recommended_parts', label: t('Recommended parts') },
