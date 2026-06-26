@@ -952,6 +952,7 @@ function ReportCard({ report, dispatchId }: { report: string; dispatchId?: strin
 }
 
 export function TextContentPart({ content }: { content: string }) {
+  const { t } = useTranslation();
   const {
     text,
     steps,
