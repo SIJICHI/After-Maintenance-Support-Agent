@@ -536,7 +536,6 @@ function EditableActionTable({ rows: initialRows }: { rows: StepRow[] }) {
   const [rows, setRows] = useState<StepRow[]>(
     initialRows.length ? initialRows : [{ item: '', details: [], notes: '' }]
   );
-  const [checked, setChecked] = useState<boolean[]>(initialRows.map(() => false));
   const [released, setReleased] = useState(false);
 
   const setItem = (i: number, v: string) =>
@@ -553,19 +552,11 @@ function EditableActionTable({ rows: initialRows }: { rows: StepRow[] }) {
         idx === i ? { ...r, notes: v.split('\n').map(s => s.trim()).filter(Boolean).join(';') } : r
       )
     );
-  const toggleCheck = (i: number) =>
-    setChecked(prev => {
-      const next = [...prev];
-      next[i] = !next[i];
-      return next;
-    });
   const addRow = () => {
     setRows(prev => [...prev, { item: '', details: [], notes: '' }]);
-    setChecked(prev => [...prev, false]);
   };
   const removeRow = (i: number) => {
     setRows(prev => prev.filter((_, idx) => idx !== i));
-    setChecked(prev => prev.filter((_, idx) => idx !== i));
   };
 
   const onRelease = () => {
@@ -596,13 +587,6 @@ function EditableActionTable({ rows: initialRows }: { rows: StepRow[] }) {
         {rows.map((row, i) => (
           <div key={i} className="rounded-md border border-border p-2">
             <div className="flex items-start gap-2">
-              <input
-                type="checkbox"
-                checked={checked[i] ?? false}
-                disabled={released}
-                onChange={() => toggleCheck(i)}
-                className="mt-2 size-4 shrink-0 accent-primary"
-              />
               <div className="flex flex-1 flex-col gap-1.5">
                 <input
                   type="text"
