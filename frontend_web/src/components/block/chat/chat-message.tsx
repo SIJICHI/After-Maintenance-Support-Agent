@@ -105,6 +105,7 @@ const COMPLETE_REGEX = /\[\[complete_action\]\]\s*([\s\S]*?)\s*\[\[\/complete_ac
 const REPORT_REGEX = /\[\[report\]\]\s*([\s\S]*?)\s*\[\[\/report\]\]/;
 const HANDOFF_REGEX = /\[\[handoff_draft\]\]\s*([\s\S]*?)\s*\[\[\/handoff_draft\]\]/;
 const RSE_ACTIONS_REGEX = /\[\[rse_actions\]\]\s*([\s\S]*?)\s*\[\[\/rse_actions\]\]/;
+const HEARING_REGEX = /\[\[hearing\]\]\s*([\s\S]*?)\s*\[\[\/hearing\]\]/;
 
 interface StepRow {
   item: string;
@@ -163,6 +164,15 @@ function parseRseActions(content: string): { rest: string; rows: StepRow[] | nul
     return { rest: content, rows: null };
   }
   return { rest: content.replace(RSE_ACTIONS_REGEX, '').trimEnd(), rows: parsePipeRows(match[1]) };
+}
+
+// [[hearing]] を顧客ヒアリングのチェック表として解析する。
+function parseHearing(content: string): { rest: string; rows: StepRow[] | null } {
+  const match = content.match(HEARING_REGEX);
+  if (!match) {
+    return { rest: content, rows: null };
+  }
+  return { rest: content.replace(HEARING_REGEX, '').trimEnd(), rows: parsePipeRows(match[1]) };
 }
 
 // [[choices]] ブロックを解析する。先頭が「?」の行は質問文、それ以外は選択肢。
@@ -260,10 +270,12 @@ function parseContent(content: string): {
   reportDispatchId: string;
   handoff: HandoffDraft | null;
   rseActions: StepRow[] | null;
+  hearing: StepRow[] | null;
 } {
   const stepsResult = parseSteps(content);
   const rseActionsResult = parseRseActions(stepsResult.rest);
-  const handoffResult = parseHandoff(rseActionsResult.rest);
+  const hearingResult = parseHearing(rseActionsResult.rest);
+  const handoffResult = parseHandoff(hearingResult.rest);
   const completeResult = parseCompleteAction(handoffResult.rest);
   const reportMatch = completeResult.rest.match(REPORT_REGEX);
   let report = reportMatch ? reportMatch[1].trim() : '';
@@ -291,6 +303,7 @@ function parseContent(content: string): {
     reportDispatchId,
     handoff: handoffResult.handoff,
     rseActions: rseActionsResult.rows,
+    hearing: hearingResult.rows,
   };
 }
 
@@ -370,10 +383,18 @@ function StepChecklist({
   steps,
   completeQuestion,
   completeChoices,
+  title,
+  itemHeader,
+  detailsHeader,
+  notesHeader,
 }: {
   steps: StepRow[];
   completeQuestion?: string;
   completeChoices?: string[];
+  title?: string;
+  itemHeader?: string;
+  detailsHeader?: string;
+  notesHeader?: string;
 }) {
   const { t } = useTranslation();
   const storageKey = useMemo(() => hashKey(steps.map(s => s.item).join('|')), [steps]);
@@ -418,16 +439,16 @@ function StepChecklist({
         `}
       >
         <CheckCircle2 className="size-4" />
-        {t('Work checklist')} ({doneCount}/{steps.length})
+        {title ?? t('Work checklist')} ({doneCount}/{steps.length})
       </div>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse body-secondary text-foreground!">
           <thead>
             <tr className="border-b border-border bg-muted/20 text-left">
               <th className="w-10 px-2 py-2 text-center">✓</th>
-              <th className="px-3 py-2">{t('Step')}</th>
-              <th className="px-3 py-2">{t('Details')}</th>
-              <th className="px-3 py-2">{t('Notes')}</th>
+              <th className="px-3 py-2">{itemHeader ?? t('Step')}</th>
+              <th className="px-3 py-2">{detailsHeader ?? t('Details')}</th>
+              <th className="px-3 py-2">{notesHeader ?? t('Notes')}</th>
             </tr>
           </thead>
           <tbody>
@@ -805,6 +826,7 @@ export function TextContentPart({ content }: { content: string }) {
     reportDispatchId,
     handoff,
     rseActions,
+    hearing,
   } = useMemo(() => parseContent(content ? content : ''), [content]);
   return (
     <>
@@ -814,6 +836,15 @@ export function TextContentPart({ content }: { content: string }) {
           steps={steps}
           completeQuestion={completeQuestion}
           completeChoices={completeChoices}
+        />
+      )}
+      {hearing && hearing.length > 0 && (
+        <StepChecklist
+          steps={hearing}
+          title={t('Hearing checklist (confirm with customer)')}
+          itemHeader={t('Item to confirm')}
+          detailsHeader={t('Points')}
+          notesHeader={t('Memo')}
         />
       )}
       {rseActions && <EditableActionTable rows={rseActions} />}
