@@ -193,11 +193,21 @@ function parseContent(content: string): {
   completeQuestion: string;
   completeChoices: string[];
   report: string;
+  reportDispatchId: string;
 } {
   const stepsResult = parseSteps(content);
   const completeResult = parseCompleteAction(stepsResult.rest);
   const reportMatch = completeResult.rest.match(REPORT_REGEX);
-  const report = reportMatch ? reportMatch[1].trim() : '';
+  let report = reportMatch ? reportMatch[1].trim() : '';
+  // 報告書先頭のメタ行 "dispatch_id: D-..." を抽出し、表示からは除く（ファイル名に使う）。
+  let reportDispatchId = '';
+  if (report) {
+    const metaMatch = report.match(/^\s*dispatch_id\s*[:：]\s*(D-[\w-]+)\s*\n?/i);
+    if (metaMatch) {
+      reportDispatchId = metaMatch[1];
+      report = report.replace(metaMatch[0], '').trim();
+    }
+  }
   const afterReport = reportMatch
     ? completeResult.rest.replace(REPORT_REGEX, '').trimEnd()
     : completeResult.rest;
@@ -210,6 +220,7 @@ function parseContent(content: string): {
     completeQuestion: completeResult.question,
     completeChoices: completeResult.choices,
     report,
+    reportDispatchId,
   };
 }
 
@@ -445,14 +456,17 @@ function QuickReplies({ choices }: { choices: string[] }) {
 }
 
 // 報告書ドラフトのカード表示。Markdownで描画し、その描画HTMLをWord(.doc)として出力する。
-function ReportCard({ report }: { report: string }) {
+function ReportCard({ report, dispatchId }: { report: string; dispatchId?: string }) {
   const { t } = useTranslation();
   const bodyRef = useRef<HTMLDivElement>(null);
 
   const onDownload = () => {
     const html = bodyRef.current?.innerHTML ?? '';
     const today = new Date().toISOString().slice(0, 10);
-    downloadAsWord(`service_report_${today}.doc`, html);
+    const filename = dispatchId
+      ? `service_report_${dispatchId}_${today}.doc`
+      : `service_report_${today}.doc`;
+    downloadAsWord(filename, html);
   };
 
   return (
@@ -488,10 +502,16 @@ function ReportCard({ report }: { report: string }) {
 }
 
 export function TextContentPart({ content }: { content: string }) {
-  const { text, steps, question, choices, completeQuestion, completeChoices, report } = useMemo(
-    () => parseContent(content ? content : ''),
-    [content]
-  );
+  const {
+    text,
+    steps,
+    question,
+    choices,
+    completeQuestion,
+    completeChoices,
+    report,
+    reportDispatchId,
+  } = useMemo(() => parseContent(content ? content : ''), [content]);
   return (
     <>
       <Markdown>{text}</Markdown>
@@ -502,7 +522,7 @@ export function TextContentPart({ content }: { content: string }) {
           completeChoices={completeChoices}
         />
       )}
-      {report && <ReportCard report={report} />}
+      {report && <ReportCard report={report} dispatchId={reportDispatchId} />}
       {question && <div className="mt-3 body font-medium">{question}</div>}
       {choices.length > 0 && <QuickReplies choices={choices} />}
     </>
