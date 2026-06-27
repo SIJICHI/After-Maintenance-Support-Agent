@@ -107,6 +107,7 @@ const HANDOFF_REGEX = /\[\[handoff_draft\]\]\s*([\s\S]*?)\s*\[\[\/handoff_draft\
 const RSE_ACTIONS_REGEX = /\[\[rse_actions\]\]\s*([\s\S]*?)\s*\[\[\/rse_actions\]\]/;
 const HEARING_REGEX = /\[\[hearing\]\]\s*([\s\S]*?)\s*\[\[\/hearing\]\]/;
 const BRIEFING_REGEX = /\[\[dispatch_briefing\]\]\s*([\s\S]*?)\s*\[\[\/dispatch_briefing\]\]/;
+const TRIAGE_REGEX = /\[\[triage\]\]\s*([\s\S]*?)\s*\[\[\/triage\]\]/;
 
 interface StepRow {
   item: string;
@@ -174,6 +175,30 @@ function parseHearing(content: string): { rest: string; rows: StepRow[] | null }
     return { rest: content, rows: null };
   }
   return { rest: content.replace(HEARING_REGEX, '').trimEnd(), rows: parsePipeRows(match[1]) };
+}
+
+interface TriageField {
+  label: string;
+  value: string;
+}
+
+// [[triage]] を「区分: 内容」行として順序保持で解析する（区分名は可変＝方針の名称が persona で変わる）。
+function parseTriage(content: string): { rest: string; fields: TriageField[] | null } {
+  const match = content.match(TRIAGE_REGEX);
+  if (!match) {
+    return { rest: content, fields: null };
+  }
+  const fields: TriageField[] = match[1]
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => {
+      const idx = line.search(/[:：]/);
+      if (idx < 0) return { label: '', value: line };
+      return { label: line.slice(0, idx).trim(), value: line.slice(idx + 1).trim() };
+    })
+    .filter(f => f.label || f.value);
+  return { rest: content.replace(TRIAGE_REGEX, '').trimEnd(), fields };
 }
 
 interface DispatchBriefing {
@@ -315,11 +340,13 @@ function parseContent(content: string): {
   rseActions: StepRow[] | null;
   hearing: StepRow[] | null;
   briefing: DispatchBriefing | null;
+  triage: TriageField[] | null;
 } {
   const stepsResult = parseSteps(content);
   const rseActionsResult = parseRseActions(stepsResult.rest);
   const hearingResult = parseHearing(rseActionsResult.rest);
-  const briefingResult = parseBriefing(hearingResult.rest);
+  const triageResult = parseTriage(hearingResult.rest);
+  const briefingResult = parseBriefing(triageResult.rest);
   const handoffResult = parseHandoff(briefingResult.rest);
   const completeResult = parseCompleteAction(handoffResult.rest);
   const reportMatch = completeResult.rest.match(REPORT_REGEX);
@@ -350,6 +377,7 @@ function parseContent(content: string): {
     rseActions: rseActionsResult.rows,
     hearing: hearingResult.rows,
     briefing: briefingResult.briefing,
+    triage: triageResult.fields,
   };
 }
 
@@ -381,50 +409,6 @@ function hashKey(input: string): string {
   return `fse-steps-${(hash >>> 0).toString(36)}`;
 }
 
-// 注意事項セル。各項目はセミコロン区切り。先頭が「!」の項目は安全重要事項として
-// 警告アイコン＋赤系で強調する。
-function NotesCell({ notes }: { notes: string }) {
-  const items = notes
-    .split(/[;；]/)
-    .map(n => n.trim())
-    .filter(Boolean);
-
-  if (items.length === 0) {
-    return <span className="text-muted-foreground">—</span>;
-  }
-
-  return (
-    <ul className="space-y-1">
-      {items.map((raw, i) => {
-        const isSafety = /^[!！]/.test(raw);
-        const text = raw.replace(/^[!！]\s*/, '');
-        if (isSafety) {
-          return (
-            <li
-              key={i}
-              className={cn(
-                `
-                  flex items-start gap-1.5 rounded border border-yellow-400/50
-                  bg-yellow-500/15 px-2 py-1 text-yellow-300
-                `
-              )}
-            >
-              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-              <span className="font-medium">{text}</span>
-            </li>
-          );
-        }
-        return (
-          <li key={i} className="flex items-start gap-1.5">
-            <span className="mt-1.5 size-1 shrink-0 rounded-full bg-muted-foreground" />
-            <span>{text}</span>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
 // 局面①の顧客ヒアリング表。RSEが電話しながら確認結果(メモ)を記入でき、
 // エージェント提示の項目に加えてRSE独自の確認項目を追加・編集・削除できる。状態はlocalStorage保存。
 interface HearingRow {
@@ -434,11 +418,31 @@ interface HearingRow {
   checked: boolean;
 }
 
-function HearingChecklist({ steps, title }: { steps: StepRow[]; title: string }) {
+// 編集可能なチェックリスト表。項目/詳細/メモを編集でき、行の追加・削除・チェックができる。
+// ヒアリング表・作業チェックリストなど共通のUXで用いる（基本思想: 全出力は編集可能なドラフト）。
+function StepChecklist({
+  steps,
+  completeQuestion,
+  completeChoices,
+  title,
+  itemHeader,
+  detailsHeader,
+  notesHeader,
+  storageNs = 'steps',
+}: {
+  steps: StepRow[];
+  completeQuestion?: string;
+  completeChoices?: string[];
+  title?: string;
+  itemHeader?: string;
+  detailsHeader?: string;
+  notesHeader?: string;
+  storageNs?: string;
+}) {
   const { t } = useTranslation();
   const storageKey = useMemo(
-    () => `${hashKey(steps.map(s => s.item).join('|'))}-hearing`,
-    [steps]
+    () => `${hashKey(steps.map(s => s.item).join('|'))}-${storageNs}`,
+    [steps, storageNs]
   );
   const [rows, setRows] = useState<HearingRow[]>(() => {
     if (typeof window !== 'undefined') {
@@ -452,7 +456,7 @@ function HearingChecklist({ steps, title }: { steps: StepRow[]; title: string })
         // ignore
       }
     }
-    return steps.map(s => ({ item: s.item, details: s.details, memo: '', checked: false }));
+    return steps.map(s => ({ item: s.item, details: s.details, memo: s.notes, checked: false }));
   });
 
   const persist = (next: HearingRow[]): HearingRow[] => {
@@ -470,6 +474,7 @@ function HearingChecklist({ steps, title }: { steps: StepRow[]; title: string })
   const removeRow = (i: number) => setRows(prev => persist(prev.filter((_, idx) => idx !== i)));
 
   const doneCount = rows.filter(r => r.checked).length;
+  const allDone = rows.length > 0 && doneCount === rows.length;
   const inputCls =
     'w-full resize-y rounded border border-border bg-background px-2 py-1 body-secondary text-foreground! focus:border-primary focus:outline-none';
 
@@ -477,21 +482,21 @@ function HearingChecklist({ steps, title }: { steps: StepRow[]; title: string })
     <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
       <div
         className={`
-          flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2 caption-01
-          text-muted-foreground
+          flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2
+          caption-01 text-muted-foreground
         `}
       >
         <CheckCircle2 className="size-4" />
-        {title} ({doneCount}/{rows.length})
+        {title ?? t('Work checklist')} ({doneCount}/{rows.length})
       </div>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse body-secondary text-foreground!">
           <thead>
             <tr className="border-b border-border bg-muted/20 text-left">
               <th className="w-10 px-2 py-2 text-center">✓</th>
-              <th className="w-48 px-3 py-2">{t('Item to confirm')}</th>
-              <th className="px-3 py-2">{t('Points')}</th>
-              <th className="px-3 py-2">{t('Memo')}</th>
+              <th className="w-48 px-3 py-2">{itemHeader ?? t('Step')}</th>
+              <th className="px-3 py-2">{detailsHeader ?? t('Details')}</th>
+              <th className="px-3 py-2">{notesHeader ?? t('Notes')}</th>
               <th className="w-8 px-1 py-2"></th>
             </tr>
           </thead>
@@ -510,16 +515,16 @@ function HearingChecklist({ steps, title }: { steps: StepRow[]; title: string })
                   <textarea
                     value={row.item}
                     rows={1}
-                    placeholder={t('Item to confirm')}
+                    placeholder={itemHeader ?? t('Step')}
                     onChange={e => updateRow(i, { item: e.target.value })}
-                    className={cn(inputCls, 'font-medium')}
+                    className={cn(inputCls, 'font-medium', row.checked && 'line-through')}
                   />
                 </td>
                 <td className="px-3 py-2">
                   <textarea
                     value={row.details.join('\n')}
                     rows={Math.max(2, row.details.length)}
-                    placeholder={t('Points (one per line)')}
+                    placeholder={t('Details (one per line)')}
                     onChange={e =>
                       updateRow(i, {
                         details: e.target.value.split('\n').map(s => s.trim()).filter(Boolean),
@@ -532,7 +537,7 @@ function HearingChecklist({ steps, title }: { steps: StepRow[]; title: string })
                   <textarea
                     value={row.memo}
                     rows={2}
-                    placeholder={t('Enter result…')}
+                    placeholder={t('Notes (one per line, prefix ! for safety)')}
                     onChange={e => updateRow(i, { memo: e.target.value })}
                     className={inputCls}
                   />
@@ -562,117 +567,8 @@ function HearingChecklist({ steps, title }: { steps: StepRow[]; title: string })
             hover:bg-accent hover:text-accent-foreground
           `}
         >
-          {t('+ Add confirmation item')}
+          {t('+ Add row')}
         </button>
-      </div>
-    </div>
-  );
-}
-
-function StepChecklist({
-  steps,
-  completeQuestion,
-  completeChoices,
-  title,
-  itemHeader,
-  detailsHeader,
-  notesHeader,
-}: {
-  steps: StepRow[];
-  completeQuestion?: string;
-  completeChoices?: string[];
-  title?: string;
-  itemHeader?: string;
-  detailsHeader?: string;
-  notesHeader?: string;
-}) {
-  const { t } = useTranslation();
-  const storageKey = useMemo(() => hashKey(steps.map(s => s.item).join('|')), [steps]);
-  const [checked, setChecked] = useState<boolean[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(storageKey);
-        if (saved) {
-          const parsed = JSON.parse(saved) as boolean[];
-          if (Array.isArray(parsed) && parsed.length === steps.length) {
-            return parsed;
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }
-    return steps.map(() => false);
-  });
-
-  const toggle = (i: number) => {
-    setChecked(prev => {
-      const next = prev.map((v, idx) => (idx === i ? !v : v));
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(next));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
-  };
-
-  const doneCount = checked.filter(Boolean).length;
-  const allDone = steps.length > 0 && doneCount === steps.length;
-
-  return (
-    <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
-      <div
-        className={`
-          flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2
-          caption-01 text-muted-foreground
-        `}
-      >
-        <CheckCircle2 className="size-4" />
-        {title ?? t('Work checklist')} ({doneCount}/{steps.length})
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse body-secondary text-foreground!">
-          <thead>
-            <tr className="border-b border-border bg-muted/20 text-left">
-              <th className="w-10 px-2 py-2 text-center">✓</th>
-              <th className="px-3 py-2">{itemHeader ?? t('Step')}</th>
-              <th className="px-3 py-2">{detailsHeader ?? t('Details')}</th>
-              <th className="px-3 py-2">{notesHeader ?? t('Notes')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {steps.map((row, i) => (
-              <tr key={i} className="border-b border-border last:border-b-0 align-top">
-                <td className="px-2 py-2 text-center">
-                  <input
-                    type="checkbox"
-                    checked={checked[i] ?? false}
-                    onChange={() => toggle(i)}
-                    className="mt-0.5 size-4 accent-primary"
-                  />
-                </td>
-                <td className={cn('px-3 py-2 font-medium', checked[i] && 'line-through')}>
-                  {row.item}
-                </td>
-                <td className="px-3 py-2">
-                  {row.details.length > 0 ? (
-                    <ul className="list-disc space-y-0.5 pl-4">
-                      {row.details.map((d, j) => (
-                        <li key={j}>{d}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  <NotesCell notes={row.notes} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
       {allDone && completeChoices && completeChoices.length > 0 && (
         <div className="border-t border-border bg-muted/20 p-3">
@@ -735,6 +631,80 @@ function QuickReplies({ choices }: { choices: string[] }) {
       >
         {t('その他（自由記述）')}
       </button>
+    </div>
+  );
+}
+
+// トリアージ表（現時点の推定原因・類似傾向）の編集カード。区分ごとの内容を編集できる。
+function TriageCard({ fields }: { fields: TriageField[] }) {
+  const { t } = useTranslation();
+  const storageKey = useMemo(
+    () => `${hashKey(fields.map(f => f.label).join('|'))}-triage`,
+    [fields]
+  );
+  const [values, setValues] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          const parsed = JSON.parse(saved) as string[];
+          if (Array.isArray(parsed) && parsed.length === fields.length) return parsed;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return fields.map(f => f.value);
+  });
+  const setValue = (i: number, v: string) =>
+    setValues(prev => {
+      const next = prev.map((x, idx) => (idx === i ? v : x));
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  const inputCls =
+    'w-full resize-y rounded border border-border bg-background px-2 py-1 body-secondary text-foreground! focus:border-primary focus:outline-none';
+
+  return (
+    <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
+      <div
+        className={`
+          flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2 caption-01
+          text-muted-foreground
+        `}
+      >
+        <FileText className="size-4" />
+        {t('Current estimated cause & similar trends')}
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse body-secondary text-foreground!">
+          <tbody>
+            {fields.map((f, i) => (
+              <tr key={i} className="border-b border-border last:border-b-0 align-top">
+                <th
+                  className={`
+                    w-40 border-r border-border bg-muted/20 px-3 py-2 text-left font-medium
+                  `}
+                >
+                  {f.label}
+                </th>
+                <td className="px-3 py-2">
+                  <textarea
+                    value={values[i] ?? ''}
+                    rows={2}
+                    onChange={e => setValue(i, e.target.value)}
+                    className={inputCls}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -1050,12 +1020,36 @@ function HandoffDraftCard({ handoff }: { handoff: HandoffDraft }) {
 }
 
 // 報告書ドラフトのカード表示。Markdownで描画し、その描画HTMLをWord(.doc)として出力する。
+// SR報告書ドラフトのカード。編集（Markdown）とプレビューを切り替えでき、
+// Wordダウンロードは常に編集後の内容を使う（基本思想: 出力はドラフト、確定は人間）。
 function ReportCard({ report, dispatchId }: { report: string; dispatchId?: string }) {
   const { t } = useTranslation();
-  const bodyRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const storageKey = useMemo(() => `${hashKey(report)}-report`, [report]);
+  const [draft, setDraft] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved !== null) return saved;
+      } catch {
+        // ignore
+      }
+    }
+    return report;
+  });
+  const [editing, setEditing] = useState(false);
+
+  const onChange = (v: string) => {
+    setDraft(v);
+    try {
+      localStorage.setItem(storageKey, v);
+    } catch {
+      // ignore
+    }
+  };
 
   const onDownload = () => {
-    const html = bodyRef.current?.innerHTML ?? '';
+    const html = previewRef.current?.innerHTML ?? '';
     const today = new Date().toISOString().slice(0, 10);
     const filename = dispatchId
       ? `service_report_${dispatchId}_${today}.doc`
@@ -1075,21 +1069,46 @@ function ReportCard({ report, dispatchId }: { report: string; dispatchId?: strin
           <FileText className="size-4" />
           {t('Service report draft')}
         </span>
-        <button
-          type="button"
-          onClick={onDownload}
-          className={`
-            flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5
-            body-secondary transition-colors
-            hover:bg-accent hover:text-accent-foreground
-          `}
-        >
-          <Download className="size-3.5" />
-          {t('Download as Word')}
-        </button>
+        <span className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setEditing(e => !e)}
+            className={`
+              rounded-md border border-border bg-card px-3 py-1.5 body-secondary
+              transition-colors
+              hover:bg-accent hover:text-accent-foreground
+            `}
+          >
+            {editing ? t('Preview') : t('Edit')}
+          </button>
+          <button
+            type="button"
+            onClick={onDownload}
+            className={`
+              flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5
+              body-secondary transition-colors
+              hover:bg-accent hover:text-accent-foreground
+            `}
+          >
+            <Download className="size-3.5" />
+            {t('Download as Word')}
+          </button>
+        </span>
       </div>
-      <div ref={bodyRef} className="px-4 py-3">
-        <Markdown>{report}</Markdown>
+      {editing && (
+        <textarea
+          value={draft}
+          onChange={e => onChange(e.target.value)}
+          className={`
+            min-h-64 w-full resize-y border-b border-border bg-background px-4 py-3
+            body-secondary text-foreground!
+            focus:outline-none
+          `}
+        />
+      )}
+      {/* プレビューは常にレンダリングしておき、Wordダウンロード時にこのHTMLを使う */}
+      <div ref={previewRef} className={cn('px-4 py-3', editing && 'hidden')}>
+        <Markdown>{draft}</Markdown>
       </div>
     </div>
   );
@@ -1110,10 +1129,12 @@ export function TextContentPart({ content }: { content: string }) {
     rseActions,
     hearing,
     briefing,
+    triage,
   } = useMemo(() => parseContent(content ? content : ''), [content]);
   return (
     <>
       <Markdown>{text}</Markdown>
+      {triage && triage.length > 0 && <TriageCard fields={triage} />}
       {steps.length > 0 && (
         <StepChecklist
           steps={steps}
@@ -1122,9 +1143,13 @@ export function TextContentPart({ content }: { content: string }) {
         />
       )}
       {hearing && hearing.length > 0 && (
-        <HearingChecklist
+        <StepChecklist
           steps={hearing}
           title={t('Hearing checklist (confirm with customer)')}
+          itemHeader={t('Item to confirm')}
+          detailsHeader={t('Points')}
+          notesHeader={t('Memo')}
+          storageNs="hearing"
         />
       )}
       {rseActions && <EditableActionTable rows={rseActions} />}

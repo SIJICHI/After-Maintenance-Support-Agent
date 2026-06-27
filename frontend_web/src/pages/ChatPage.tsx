@@ -36,7 +36,7 @@ const initialMessages: MessageResponse[] = [
       parts: [
         {
           type: 'text',
-          text: `Hello!`,
+          text: 'ご利用にあたり、従業員IDを入力してください（例: RSE0001 / FSE0001）。\nIDからFSE／RSEを判別して対応します。',
         },
       ],
     },
