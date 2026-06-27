@@ -425,6 +425,150 @@ function NotesCell({ notes }: { notes: string }) {
   );
 }
 
+// 局面①の顧客ヒアリング表。RSEが電話しながら確認結果(メモ)を記入でき、
+// エージェント提示の項目に加えてRSE独自の確認項目を追加・編集・削除できる。状態はlocalStorage保存。
+interface HearingRow {
+  item: string;
+  details: string[];
+  memo: string;
+  checked: boolean;
+}
+
+function HearingChecklist({ steps, title }: { steps: StepRow[]; title: string }) {
+  const { t } = useTranslation();
+  const storageKey = useMemo(
+    () => `${hashKey(steps.map(s => s.item).join('|'))}-hearing`,
+    [steps]
+  );
+  const [rows, setRows] = useState<HearingRow[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          const parsed = JSON.parse(saved) as HearingRow[];
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return steps.map(s => ({ item: s.item, details: s.details, memo: '', checked: false }));
+  });
+
+  const persist = (next: HearingRow[]): HearingRow[] => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+    return next;
+  };
+  const updateRow = (i: number, patch: Partial<HearingRow>) =>
+    setRows(prev => persist(prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r))));
+  const addRow = () =>
+    setRows(prev => persist([...prev, { item: '', details: [], memo: '', checked: false }]));
+  const removeRow = (i: number) => setRows(prev => persist(prev.filter((_, idx) => idx !== i)));
+
+  const doneCount = rows.filter(r => r.checked).length;
+  const inputCls =
+    'w-full resize-y rounded border border-border bg-background px-2 py-1 body-secondary text-foreground! focus:border-primary focus:outline-none';
+
+  return (
+    <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
+      <div
+        className={`
+          flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2 caption-01
+          text-muted-foreground
+        `}
+      >
+        <CheckCircle2 className="size-4" />
+        {title} ({doneCount}/{rows.length})
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse body-secondary text-foreground!">
+          <thead>
+            <tr className="border-b border-border bg-muted/20 text-left">
+              <th className="w-10 px-2 py-2 text-center">✓</th>
+              <th className="w-48 px-3 py-2">{t('Item to confirm')}</th>
+              <th className="px-3 py-2">{t('Points')}</th>
+              <th className="px-3 py-2">{t('Memo')}</th>
+              <th className="w-8 px-1 py-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i} className="border-b border-border last:border-b-0 align-top">
+                <td className="px-2 py-2 text-center">
+                  <input
+                    type="checkbox"
+                    checked={row.checked}
+                    onChange={() => updateRow(i, { checked: !row.checked })}
+                    className="mt-2 size-4 accent-primary"
+                  />
+                </td>
+                <td className="px-3 py-2">
+                  <textarea
+                    value={row.item}
+                    rows={1}
+                    placeholder={t('Item to confirm')}
+                    onChange={e => updateRow(i, { item: e.target.value })}
+                    className={cn(inputCls, 'font-medium')}
+                  />
+                </td>
+                <td className="px-3 py-2">
+                  <textarea
+                    value={row.details.join('\n')}
+                    rows={Math.max(2, row.details.length)}
+                    placeholder={t('Points (one per line)')}
+                    onChange={e =>
+                      updateRow(i, {
+                        details: e.target.value.split('\n').map(s => s.trim()).filter(Boolean),
+                      })
+                    }
+                    className={inputCls}
+                  />
+                </td>
+                <td className="px-3 py-2">
+                  <textarea
+                    value={row.memo}
+                    rows={2}
+                    placeholder={t('Enter result…')}
+                    onChange={e => updateRow(i, { memo: e.target.value })}
+                    className={inputCls}
+                  />
+                </td>
+                <td className="px-1 py-2 text-center">
+                  <button
+                    type="button"
+                    onClick={() => removeRow(i)}
+                    className="rounded p-1 text-muted-foreground hover:text-destructive"
+                    title={t('Remove row')}
+                  >
+                    ✕
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="border-t border-border p-2">
+        <button
+          type="button"
+          onClick={addRow}
+          className={`
+            rounded-md border border-dashed border-muted-foreground/60 px-3 py-1.5
+            body-secondary text-muted-foreground
+            hover:bg-accent hover:text-accent-foreground
+          `}
+        >
+          {t('+ Add confirmation item')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function StepChecklist({
   steps,
   completeQuestion,
@@ -433,7 +577,6 @@ function StepChecklist({
   itemHeader,
   detailsHeader,
   notesHeader,
-  editableNotes,
 }: {
   steps: StepRow[];
   completeQuestion?: string;
@@ -442,37 +585,9 @@ function StepChecklist({
   itemHeader?: string;
   detailsHeader?: string;
   notesHeader?: string;
-  editableNotes?: boolean;
 }) {
   const { t } = useTranslation();
   const storageKey = useMemo(() => hashKey(steps.map(s => s.item).join('|')), [steps]);
-  const memoKey = `${storageKey}-memo`;
-  const [memos, setMemos] = useState<string[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(memoKey);
-        if (saved) {
-          const parsed = JSON.parse(saved) as string[];
-          if (Array.isArray(parsed) && parsed.length === steps.length) {
-            return parsed;
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }
-    return steps.map(() => '');
-  });
-  const setMemo = (i: number, v: string) =>
-    setMemos(prev => {
-      const next = prev.map((m, idx) => (idx === i ? v : m));
-      try {
-        localStorage.setItem(memoKey, JSON.stringify(next));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
   const [checked, setChecked] = useState<boolean[]>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -552,21 +667,7 @@ function StepChecklist({
                   )}
                 </td>
                 <td className="px-3 py-2">
-                  {editableNotes ? (
-                    <textarea
-                      value={memos[i] ?? ''}
-                      rows={2}
-                      placeholder={t('Enter result…')}
-                      onChange={e => setMemo(i, e.target.value)}
-                      className={`
-                        w-full resize-y rounded border border-border bg-background px-2 py-1
-                        text-foreground!
-                        focus:border-primary focus:outline-none
-                      `}
-                    />
-                  ) : (
-                    <NotesCell notes={row.notes} />
-                  )}
+                  <NotesCell notes={row.notes} />
                 </td>
               </tr>
             ))}
@@ -1021,13 +1122,9 @@ export function TextContentPart({ content }: { content: string }) {
         />
       )}
       {hearing && hearing.length > 0 && (
-        <StepChecklist
+        <HearingChecklist
           steps={hearing}
           title={t('Hearing checklist (confirm with customer)')}
-          itemHeader={t('Item to confirm')}
-          detailsHeader={t('Points')}
-          notesHeader={t('Memo')}
-          editableNotes
         />
       )}
       {rseActions && <EditableActionTable rows={rseActions} />}
