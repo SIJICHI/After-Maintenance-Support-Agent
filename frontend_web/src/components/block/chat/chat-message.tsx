@@ -433,6 +433,7 @@ function StepChecklist({
   itemHeader,
   detailsHeader,
   notesHeader,
+  editableNotes,
 }: {
   steps: StepRow[];
   completeQuestion?: string;
@@ -441,9 +442,37 @@ function StepChecklist({
   itemHeader?: string;
   detailsHeader?: string;
   notesHeader?: string;
+  editableNotes?: boolean;
 }) {
   const { t } = useTranslation();
   const storageKey = useMemo(() => hashKey(steps.map(s => s.item).join('|')), [steps]);
+  const memoKey = `${storageKey}-memo`;
+  const [memos, setMemos] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(memoKey);
+        if (saved) {
+          const parsed = JSON.parse(saved) as string[];
+          if (Array.isArray(parsed) && parsed.length === steps.length) {
+            return parsed;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return steps.map(() => '');
+  });
+  const setMemo = (i: number, v: string) =>
+    setMemos(prev => {
+      const next = prev.map((m, idx) => (idx === i ? v : m));
+      try {
+        localStorage.setItem(memoKey, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
   const [checked, setChecked] = useState<boolean[]>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -523,7 +552,21 @@ function StepChecklist({
                   )}
                 </td>
                 <td className="px-3 py-2">
-                  <NotesCell notes={row.notes} />
+                  {editableNotes ? (
+                    <textarea
+                      value={memos[i] ?? ''}
+                      rows={2}
+                      placeholder={t('Enter result…')}
+                      onChange={e => setMemo(i, e.target.value)}
+                      className={`
+                        w-full resize-y rounded border border-border bg-background px-2 py-1
+                        text-foreground!
+                        focus:border-primary focus:outline-none
+                      `}
+                    />
+                  ) : (
+                    <NotesCell notes={row.notes} />
+                  )}
                 </td>
               </tr>
             ))}
@@ -984,6 +1027,7 @@ export function TextContentPart({ content }: { content: string }) {
           itemHeader={t('Item to confirm')}
           detailsHeader={t('Points')}
           notesHeader={t('Memo')}
+          editableNotes
         />
       )}
       {rseActions && <EditableActionTable rows={rseActions} />}
