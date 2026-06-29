@@ -15,6 +15,7 @@
 import asyncio
 import json
 import logging
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import AsyncGenerator, final
@@ -63,6 +64,21 @@ from app.messages import (
 )
 
 logger = logging.getLogger(__name__)
+
+# 従業員ID（例: RSE0001 / FSE0001）の判定。冒頭の従業員ID入力をチャット名に使わないため。
+_EMPLOYEE_ID_RE = re.compile(r"^(RSE|FSE)\d+$", re.IGNORECASE)
+
+
+def _derive_chat_name(messages: list) -> str | None:
+    """チャット名にふさわしい最初のユーザーメッセージ（従業員IDは除く）の先頭20字を返す。"""
+    for message in messages:
+        content = getattr(message, "content", None)
+        if isinstance(content, str) and content.strip():
+            text = content.strip()
+            if _EMPLOYEE_ID_RE.match(text):
+                continue  # 従業員IDはタイトルにしない
+            return text[:20]
+    return None
 
 
 @dataclass
@@ -147,20 +163,26 @@ class AGUIAgentWithStorage(AGUIAgent):
             self._user_id, input.thread_id
         ):
             existing_chat = maybe_chat
+            # 初回が従業員IDだった場合、チャット名が "New Chat" や従業員IDのままになる。
+            # 実質的なプロンプトが届いたら、それをチャット名に補正する。
+            if existing_chat.name == "New Chat" or _EMPLOYEE_ID_RE.match(
+                existing_chat.name.strip()
+            ):
+                derived = _derive_chat_name(input.messages)
+                if derived and derived != existing_chat.name:
+                    updated = await self._chat_repo.update_chat_name(
+                        existing_chat.uuid, derived
+                    )
+                    if updated:
+                        existing_chat = updated
         else:
             logger.debug(
                 "Creating initial chat",
                 extra={"thread_id": input.thread_id, "user": str(self._user_id)},
             )
 
-            if (
-                input.messages
-                and isinstance(input.messages[0].content, str)
-                and len(input.messages[0].content.strip()) > 0
-            ):
-                chat_name = input.messages[0].content[:20].strip()
-            else:
-                chat_name = "New Chat"
+            # 従業員IDはチャット名にしない（後続の実質的なプロンプトで補正する）。
+            chat_name = _derive_chat_name(input.messages) or "New Chat"
 
             existing_chat = await self._chat_repo.create_chat(
                 ChatCreate(
