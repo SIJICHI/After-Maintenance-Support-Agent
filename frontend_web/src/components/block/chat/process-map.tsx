@@ -36,7 +36,10 @@ function deriveSteps(
     if (text.startsWith('以下の内容でディスパッチ票を発行')) return [];
     if (text.startsWith('以下のネクストアクションをFSEにリリース')) return [];
     if (isFirstUserPrompt) return [{ label: t('事案入力') }];
-    return [{ label: persona === 'FSE' ? t('FSE入力') : t('RSE入力') }];
+    // FSEの作業は「作業手順」カードのチェック・編集で表現される。分岐回答など後続の
+    // 汎用入力は独立カードにしない（プロセスマップを煩雑にしないため）。
+    if (persona === 'FSE') return [];
+    return [{ label: t('RSE入力') }];
   }
 
   if (msg.role === 'assistant') {
@@ -79,16 +82,19 @@ export function ProcessMap({
   const { t } = useTranslation();
 
   const steps = useMemo<ProcessStep[]>(() => {
-    // 会話冒頭の従業員IDからペルソナを判定（FSE####/RSE####）
+    // 会話からペルソナを判定（従業員ID FSE####/RSE####、本文中のID、[FIELD]/[REMOTE]タグ）
     let persona: 'FSE' | 'RSE' | null = null;
     for (const e of events) {
       if (!isMessageStateEvent(e)) continue;
       const m = e.value;
       if (m.role !== 'user') continue;
       const txt = messageText(m).trim();
-      const idm = txt.match(EMPLOYEE_ID_RE);
-      if (idm) {
-        persona = idm[1].toUpperCase() === 'FSE' ? 'FSE' : 'RSE';
+      if (/\bFSE\d+/i.test(txt) || txt.includes('[FIELD]')) {
+        persona = 'FSE';
+        break;
+      }
+      if (/\bRSE\d+/i.test(txt) || txt.includes('[REMOTE]')) {
+        persona = 'RSE';
         break;
       }
     }
