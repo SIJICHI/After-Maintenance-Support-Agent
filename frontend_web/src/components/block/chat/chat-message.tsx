@@ -492,7 +492,9 @@ interface HearingRow {
 
 // 注意事項セル（読取専用）。各項目はセミコロン区切り。先頭が「!」の項目は安全重要事項として
 // 警告アイコン＋黄色で強調する。
-function NotesCell({ notes }: { notes: string }) {
+// 【安全表示は不可侵】この安全ハイライト（!→⚠️黄色）は患者・ユーザー・作業員の安全に直結する
+// ため、決して削除・無効化しないこと。回帰テスト notes-cell.test.tsx で保護している。
+export function NotesCell({ notes }: { notes: string }) {
   const items = notes
     .split(/[;；\n]/)
     .map(n => n.trim())
@@ -509,6 +511,7 @@ function NotesCell({ notes }: { notes: string }) {
           return (
             <li
               key={i}
+              data-testid="safety-note"
               className={`
                 flex items-start gap-1.5 rounded border border-yellow-400/50 bg-yellow-500/15
                 px-2 py-1 text-yellow-300
