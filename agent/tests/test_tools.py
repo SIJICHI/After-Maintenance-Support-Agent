@@ -24,6 +24,7 @@ import pytest
 from agent.tools import (
     create_dispatch_ticket,
     customer_lookup,
+    employee_lookup,
     exact_lookup,
     get_dispatch_ticket,
     hearing_template,
@@ -171,6 +172,31 @@ class TestImageSearch:
 
     def test_tool_name(self):
         assert image_search.name == "image_search"
+
+
+class TestEmployeeLookup:
+    def test_valid_rse(self):
+        r = json.loads(employee_lookup.invoke({"employee_id": "RSE0001"}))
+        assert r["found"] is True
+        assert r["role"] == "RSE"
+        assert r["name"]
+
+    def test_valid_fse_boundary(self):
+        assert json.loads(employee_lookup.invoke({"employee_id": "FSE0100"}))["found"] is True
+        assert json.loads(employee_lookup.invoke({"employee_id": "FSE0001"}))["found"] is True
+
+    def test_out_of_range(self):
+        assert json.loads(employee_lookup.invoke({"employee_id": "FSE0101"}))["found"] is False
+        assert json.loads(employee_lookup.invoke({"employee_id": "RSE0021"}))["found"] is False
+
+    def test_malformed_suffix(self):
+        assert json.loads(employee_lookup.invoke({"employee_id": "FSE15AB"}))["found"] is False
+
+    def test_case_insensitive(self):
+        assert json.loads(employee_lookup.invoke({"employee_id": "rse0001"}))["found"] is True
+
+    def test_tool_name(self):
+        assert employee_lookup.name == "employee_lookup"
 
 
 class TestCustomerLookup:

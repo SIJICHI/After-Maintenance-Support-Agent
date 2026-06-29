@@ -112,6 +112,37 @@ def _load_customers() -> dict[str, dict]:
     return data.get("customers", {})
 
 
+@lru_cache(maxsize=1)
+def _load_employees() -> dict[str, dict]:
+    data = json.loads((DATA_DIR / "employee_master.json").read_text(encoding="utf-8"))
+    return data.get("employees", {})
+
+
+@tool
+def employee_lookup(
+    employee_id: Annotated[str, "従業員ID（例: RSE0001 / FSE0001）"],
+) -> str:
+    """従業員マスタを照合し、その従業員IDが実在するかと、氏名・役割（RSE/FSE）・所属を返す。
+    アプリ利用開始時のID検証に使う。該当しないIDは無効として扱い、利用を進めてはいけない。
+    """
+    employees = _load_employees()
+    eid = employee_id.strip().upper()
+    rec = employees.get(eid)
+    if rec is None:
+        return json.dumps(
+            {
+                "found": False,
+                "employee_id": eid,
+                "message": (
+                    f"従業員ID '{eid}' は従業員マスタに存在しません。"
+                    "有効な従業員ID（例: RSE0001 / FSE0001）を入力してください。"
+                ),
+            },
+            ensure_ascii=False,
+        )
+    return json.dumps({"found": True, **rec}, ensure_ascii=False, indent=2)
+
+
 @tool
 def customer_lookup(
     site_name: Annotated[str, "病院・クリニック名（部分一致可。例: 千葉ニュータウン）"],

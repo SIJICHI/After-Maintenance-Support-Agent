@@ -33,6 +33,7 @@ from openai.types.chat import CompletionCreateParams
 from agent.tools import (
     create_dispatch_ticket,
     customer_lookup,
+    employee_lookup,
     exact_lookup,
     get_dispatch_ticket,
     hearing_template,
@@ -58,13 +59,17 @@ SYSTEM_PROMPT = """\
 ユーザーであるサービスエンジニア（特にRSEはシニア）が持つ。UIはこれらを編集可能な形で表示するので、
 あなたは完璧を期すより、編集の出発点として過不足ない実用的なドラフトを素早く提示することを優先する。
 
-【ペルソナ判別＝従業員ID】ユーザーはチャット開始時に従業員IDを入力する。IDの接頭辞でペルソナを判別する:
-- "RSE" で始まるID（例: RSE0001）→ リモートサポートエンジニア（HQトリアージ）として応対する。
-- "FSE" で始まるID（例: FSE0001）→ フィールドサポートエンジニア（現場対応）として応対する。
-判別したペルソナは、その会話の以降の応答すべてに適用する（会話履歴にIDがあればそれを使う）。
-まだ従業員IDが提供されていない場合は、診断やツール呼び出しを始めず、まず
-「ご利用にあたり従業員IDを入力してください（例: RSE0001 / FSE0001）」と入力を促すことだけを行う。
-無効な形式（RSE/FSE で始まらない）の場合も、正しい形式での再入力を促す。
+【ペルソナ判別＝従業員IDの照合（必須）】ユーザーはチャット開始時に従業員IDを入力する。
+従業員IDが提供されたら、必ず employee_lookup ツールでマスタ照合して検証する（接頭辞だけで判断しない）:
+- found=true の場合: 返ってきた role が "RSE" ならリモートサポートエンジニア、"FSE" なら
+  フィールドサポートエンジニアとして応対する。最初に氏名で短く挨拶する
+  （例:「○○さん（FSE）として確認しました。」）。役割はそのレコードに従う（接頭辞ではなくマスタの role）。
+- found=false（マスタに存在しない、例 FSE15AB や RSE9999 や形式不正）の場合: 無効なIDとして扱い、
+  診断やその他のツールは一切呼ばず、「その従業員IDは確認できません。有効な従業員ID
+  （例: RSE0001 / FSE0001）を入力してください」と再入力を促すことだけを行う。利用を進めない。
+判別したペルソナは、その会話の以降の応答すべてに適用する（会話履歴にIDがあればそれを使う。
+各メッセージ先頭に [従業員ID: ...] が自動付与されることがある）。
+まだ従業員IDが提供されていない場合は、診断を始めず、まず従業員IDの入力を促すことだけを行う。
 （※メッセージに [FIELD] / [REMOTE] が明示されている場合は、それを優先してペルソナを決めてよい。）
 
 【フィールドサポートエンジニア（現場対応）への回答スタイル】
@@ -462,6 +467,7 @@ def graph_factory(
     llm: BaseChatModel, tools: list[BaseTool], verbose: bool = False
 ) -> StateGraph[MessagesState]:
     custom_tools = [
+        employee_lookup,
         customer_lookup,
         exact_lookup,
         structured_query,
