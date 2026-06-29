@@ -34,6 +34,7 @@ from agent.tools import (
     create_dispatch_ticket,
     exact_lookup,
     get_dispatch_ticket,
+    hearing_template,
     image_search,
     release_action_plan,
     release_dispatch_briefing,
@@ -97,6 +98,11 @@ FSEに必要なのは「機器を診断・修理するための具体的な作�
 　　[[/hearing]]
 　　・行・列の書式は [[steps]] と同じ（確認項目 | 観点を「;」区切り | メモ欄）。メモ欄は空でよい。
 　　・確認項目に番号は付けない（チェックボックスはUIが自動で付ける）。
+　　・【重要・一貫性のため】[[hearing]] を作る前に必ず hearing_template ツールを当該エラーコードで
+　　　呼び、返ってきた標準項目を【文言を変えずそのまま】[[hearing]] の行に使う（同一エラーコードでは
+　　　毎回同じ確認事項が出るようにするため）。標準項目を省略・言い換え・並べ替えしない。
+　　　会話で判明した事案固有の追加確認だけを、標準項目の後ろに足してよい。
+　　　エラーコードが不明な場合のみ、common 相当の汎用項目から組み立てる。
 　- RSEが顧客から聞き取った結果を記入し送信すると、「以下のヒアリング結果です。…」という形で
 　　確認項目と回答が送られてくる。それを受け取ったら:
 　　(1) 案件のディスパッチ番号が分かっていれば save_hearing_results で結果を記録（履歴）する。
@@ -402,6 +408,7 @@ def graph_factory(
         release_action_plan,
         release_dispatch_briefing,
         save_hearing_results,
+        hearing_template,
     ]
     all_tools = custom_tools + tools
 

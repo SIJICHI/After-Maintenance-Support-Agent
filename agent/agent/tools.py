@@ -99,6 +99,37 @@ def _char_ngram_similarity(query: str, text: str, n: int = 2) -> float:
     return float(np.dot(q_vec, t_vec) / denom) if denom > 0 else 0.0
 
 
+@lru_cache(maxsize=1)
+def _load_hearing_templates() -> dict:
+    return json.loads(
+        (DATA_DIR / "hearing_templates.json").read_text(encoding="utf-8")
+    )
+
+
+@tool
+def hearing_template(
+    error_code: Annotated[
+        str, "エラーコード（例: AWS-001）。カテゴリ接頭辞から標準ヒアリング項目を返す。"
+    ],
+) -> str:
+    """エラーコード（カテゴリ）ごとの標準ヒアリング項目を返す。RSEが顧客電話で確認すべき
+    定型項目を固定化しており、同一現象では毎回同じ確認事項を提示するための基準データである。
+    [REMOTE] のヒアリング表（[[hearing]]）を作るときは、まずこのツールを呼び、返ってきた
+    項目を【そのままの文言で】基準に使うこと（言い換えない）。会話で判明した事案固有の項目は
+    その後に追加してよい。
+    """
+    templates = _load_hearing_templates()
+    code = error_code.strip().upper()
+    category = code.split("-")[0] if "-" in code else code
+    items = list(templates.get("common", []))
+    items += templates.get(category, [])
+    return json.dumps(
+        {"error_code": code, "category": category, "items": items},
+        ensure_ascii=False,
+        indent=2,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Tool 1: exact_lookup
 # ---------------------------------------------------------------------------

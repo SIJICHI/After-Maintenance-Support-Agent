@@ -25,6 +25,7 @@ from agent.tools import (
     create_dispatch_ticket,
     exact_lookup,
     get_dispatch_ticket,
+    hearing_template,
     image_search,
     release_action_plan,
     release_dispatch_briefing,
@@ -169,6 +170,29 @@ class TestImageSearch:
 
     def test_tool_name(self):
         assert image_search.name == "image_search"
+
+
+class TestHearingTemplate:
+    def test_returns_common_plus_category(self):
+        result = json.loads(hearing_template.invoke({"error_code": "AWS-001"}))
+        assert result["category"] == "AWS"
+        labels = [i["item"] for i in result["items"]]
+        # 共通項目＋AWSカテゴリ項目が含まれる
+        assert "現在の使用状況" in labels
+        assert "水タンク・接続" in labels
+
+    def test_deterministic_same_code(self):
+        a = hearing_template.invoke({"error_code": "CLN-001"})
+        b = hearing_template.invoke({"error_code": "cln-001"})
+        assert a == b  # 同一エラーコードでは常に同じ標準項目
+
+    def test_unknown_category_returns_common_only(self):
+        result = json.loads(hearing_template.invoke({"error_code": "ZZZ-999"}))
+        labels = [i["item"] for i in result["items"]]
+        assert "現在の使用状況" in labels  # commonは必ず返る
+
+    def test_tool_name(self):
+        assert hearing_template.name == "hearing_template"
 
 
 class TestDispatch:
