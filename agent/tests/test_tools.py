@@ -28,6 +28,7 @@ from agent.tools import (
     image_search,
     release_action_plan,
     release_dispatch_briefing,
+    save_hearing_results,
     semantic_search,
     structured_query,
     voice_search,
@@ -263,6 +264,17 @@ class TestDispatch:
             release_action_plan.invoke({"dispatch_id": "D-00000000-0000-01", "action_plan": "x | y | z"})
         )
         assert "error" in result
+
+    def test_save_hearing_results_history(self):
+        did = "D-20260808-5151"
+        save_hearing_results.invoke({"dispatch_id": did, "hearing_results": "使用状況: 待機中"})
+        r2 = json.loads(
+            save_hearing_results.invoke({"dispatch_id": did, "hearing_results": "症状: 断続的"})
+        )
+        assert r2["status"] == "hearing_recorded"
+        fetched = json.loads(get_dispatch_ticket.invoke({"dispatch_id": did}))
+        assert len(fetched["hearing_history"]) == 2
+        assert fetched["hearing_history"][1]["results"] == "症状: 断続的"
 
     def test_release_dispatch_briefing_upsert_and_get(self):
         # コールセンター発番のみで未登録の番号でも、ブリーフィングのリリースで新規登録される

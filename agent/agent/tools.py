@@ -506,3 +506,45 @@ def release_dispatch_briefing(
         ensure_ascii=False,
         indent=2,
     )
+
+
+@tool
+def save_hearing_results(
+    dispatch_id: Annotated[
+        str, "対象案件のディスパッチ番号（コールセンター発番の親番号。例: D-20260626-7765）"
+    ],
+    hearing_results: Annotated[
+        str, "RSEが顧客への電話ヒアリングで確認した結果（確認項目と回答）をまとめたテキスト"
+    ],
+) -> str:
+    """RSEが顧客電話で確認したヒアリング結果を、ディスパッチ番号に紐づけて保存（履歴）する。
+    後日トラックできるよう、追記履歴として残す。案件番号が未登録の場合は新規登録する。
+    保存後、エージェントはこの結果を踏まえてトリアージとFSE向けレシピを再ドラフトする。
+    """
+    store = _load_dispatch_store()
+    did = dispatch_id.strip()
+    ticket = store.get(did)
+    if ticket is None:
+        ticket = {
+            "dispatch_id": did,
+            "parent_dispatch_id": did,
+            "type": "call_center_dispatch",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+    history = ticket.get("hearing_history", [])
+    history.append(
+        {"at": datetime.now(timezone.utc).isoformat(), "results": hearing_results}
+    )
+    ticket["hearing_history"] = history
+    ticket["status"] = "hearing_recorded"
+    store[did] = ticket
+    _save_dispatch_store()
+    return json.dumps(
+        {
+            "dispatch_id": did,
+            "status": "hearing_recorded",
+            "message": f"ヒアリング結果をディスパッチ番号 {did} に記録しました（履歴 {len(history)} 件目）。",
+        },
+        ensure_ascii=False,
+        indent=2,
+    )

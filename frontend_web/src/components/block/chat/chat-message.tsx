@@ -429,6 +429,7 @@ function StepChecklist({
   detailsHeader,
   notesHeader,
   storageNs = 'steps',
+  submit,
 }: {
   steps: StepRow[];
   completeQuestion?: string;
@@ -438,8 +439,10 @@ function StepChecklist({
   detailsHeader?: string;
   notesHeader?: string;
   storageNs?: string;
+  submit?: { label: string; prefix: string };
 }) {
   const { t } = useTranslation();
+  const ctx = useChatContext();
   const storageKey = useMemo(
     () => `${hashKey(steps.map(s => s.item).join('|'))}-${storageNs}`,
     [steps, storageNs]
@@ -557,7 +560,7 @@ function StepChecklist({
           </tbody>
         </table>
       </div>
-      <div className="border-t border-border p-2">
+      <div className="flex flex-wrap items-center gap-2 border-t border-border p-2">
         <button
           type="button"
           onClick={addRow}
@@ -569,6 +572,31 @@ function StepChecklist({
         >
           {t('+ Add row')}
         </button>
+        {submit && (
+          <button
+            type="button"
+            disabled={ctx.isAgentRunning}
+            onClick={() => {
+              const body = rows
+                .map(
+                  r =>
+                    `- ${r.item}（観点: ${r.details.join('、') || '—'}）→ 結果: ${r.memo || '（未確認）'}`
+                )
+                .join('\n');
+              ctx.sendMessage(`${submit.prefix}\n${body}`);
+            }}
+            className={cn(
+              `
+                rounded-md border border-border bg-primary px-4 py-1.5 body-secondary
+                text-primary-foreground
+                hover:opacity-90
+              `,
+              'disabled:cursor-not-allowed disabled:opacity-50'
+            )}
+          >
+            {submit.label}
+          </button>
+        )}
       </div>
       {allDone && completeChoices && completeChoices.length > 0 && (
         <div className="border-t border-border bg-muted/20 p-3">
@@ -1150,6 +1178,11 @@ export function TextContentPart({ content }: { content: string }) {
           detailsHeader={t('Points')}
           notesHeader={t('Memo')}
           storageNs="hearing"
+          submit={{
+            label: t('Update triage & recipe with these results'),
+            prefix:
+              '以下のヒアリング結果です。これを踏まえてトリアージを更新し、FSEへ送るレシピ（派遣ブリーフィング）をドラフトしてください。対象のディスパッチ番号が分かる場合は save_hearing_results で記録してください。',
+          }}
         />
       )}
       {rseActions && <EditableActionTable rows={rseActions} />}

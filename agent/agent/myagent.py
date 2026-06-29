@@ -37,6 +37,7 @@ from agent.tools import (
     image_search,
     release_action_plan,
     release_dispatch_briefing,
+    save_hearing_results,
     semantic_search,
     structured_query,
     voice_search,
@@ -96,6 +97,13 @@ FSEに必要なのは「機器を診断・修理するための具体的な作�
 　　[[/hearing]]
 　　・行・列の書式は [[steps]] と同じ（確認項目 | 観点を「;」区切り | メモ欄）。メモ欄は空でよい。
 　　・確認項目に番号は付けない（チェックボックスはUIが自動で付ける）。
+　- RSEが顧客から聞き取った結果を記入し送信すると、「以下のヒアリング結果です。…」という形で
+　　確認項目と回答が送られてくる。それを受け取ったら:
+　　(1) 案件のディスパッチ番号が分かっていれば save_hearing_results で結果を記録（履歴）する。
+　　(2) ヒアリング結果を踏まえて推論し直し、更新した [[triage]] 表を提示する。
+　　(3) FSE派遣が妥当なら、FSEに送る「レシピ」を [[dispatch_briefing]] のドラフトとして提示する
+　　　（RSEがレビュー・編集して「FSEに派遣情報をリリース」で確定・共有する）。
+　　　電話でクローズできる見込みなら、その旨と顧客への案内を示す。
 　- 解決しない場合は推定原因・類似事例を踏まえてディスパッチ（現地派遣）要否を判断し、
 　　派遣する場合はFSEが持参すべき推奨部品を挙げる。結論は「現時点の推定原因・類似傾向」表で示す。
 　- つまり局面①は「電話でのクローズ or 現地派遣」の判断が主目的。
@@ -393,6 +401,7 @@ def graph_factory(
         get_dispatch_ticket,
         release_action_plan,
         release_dispatch_briefing,
+        save_hearing_results,
     ]
     all_tools = custom_tools + tools
 
