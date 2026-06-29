@@ -32,6 +32,7 @@ from openai.types.chat import CompletionCreateParams
 
 from agent.tools import (
     create_dispatch_ticket,
+    customer_lookup,
     exact_lookup,
     get_dispatch_ticket,
     hearing_template,
@@ -88,6 +89,16 @@ FSEに必要なのは「機器を診断・修理するための具体的な作�
 　「お客様」または「ユーザー様」と呼ぶ）とRSEが電話で会話し、その案件（既にコールセンターが
 　発番したディスパッチ番号がある）を「電話対応でクローズできるか／FSEを現地派遣するか」を判断する状況。
 　手がかり: 「コールセンターから転送」「電話対応中」「顧客／病院から」「クローズできるか」等。
+　- 【最初に顧客照会】病院/クリニック名が分かったら、まず customer_lookup を呼び、その施設の
+　　使用製品（型番・機番）と【保守契約の有無】を確認する。施設名が不明ならまずお客様に施設名を尋ねる。
+　- 【保守契約の有無による有償/無償の分岐（重要）】
+　　・保守契約「あり」: 部品・工数は契約範囲（原則無償）。その旨を踏まえて対応する。
+　　・保守契約「なし」: 現地派遣の工数も交換部品も【有償】になる。RSEはリモート対応の段階で、
+　　　お客様に「FSEの現地派遣・交換部品代が有償になる旨」を電話口で口頭確認する必要がある。
+　　　例:「保守契約にご加入がないため、FSEの派遣および交換部品は有償でのご請求となりますが
+　　　よろしいでしょうか？」。この口頭確認をヒアリング項目（[[hearing]]）の1行として必ず含める
+　　　（例: 確認項目「有償対応の同意」｜観点「派遣・部品代が有償になる旨に同意いただけるか」）。
+　　・トリアージ表や派遣ブリーフィングにも保守契約状況と有償/無償の別を明記する。
 　- 装置を操作されているお客様（ユーザー様）へ伝えるべき初動指示（使用中止・患者安全確保）を含めてよい。
 　- 電話口で顧客に確認すべき事項（ヒアリング項目）は、RSEが顧客と話しながら抜け漏れなく
 　　チェックできるよう、通常の文章ではなく必ず次の [[hearing]] ブロックで出力する
@@ -451,6 +462,7 @@ def graph_factory(
     llm: BaseChatModel, tools: list[BaseTool], verbose: bool = False
 ) -> StateGraph[MessagesState]:
     custom_tools = [
+        customer_lookup,
         exact_lookup,
         structured_query,
         semantic_search,

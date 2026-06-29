@@ -106,6 +106,42 @@ def _load_hearing_templates() -> dict:
     )
 
 
+@lru_cache(maxsize=1)
+def _load_customers() -> dict[str, dict]:
+    data = json.loads((DATA_DIR / "customer_master.json").read_text(encoding="utf-8"))
+    return data.get("customers", {})
+
+
+@tool
+def customer_lookup(
+    site_name: Annotated[str, "病院・クリニック名（部分一致可。例: 千葉ニュータウン）"],
+) -> str:
+    """顧客マスタを照会し、その病院/クリニックの使用製品（型番・機番）と保守契約の有無を返す。
+    コールセンター/RSEが受電時に必ず確認する情報。保守契約が「なし」の場合、現地派遣の工数や
+    交換部品は有償となるため、RSEは電話口でお客様に有償である旨の口頭確認を取る必要がある。
+    """
+    customers = _load_customers()
+    name = site_name.strip()
+    match = None
+    # 完全一致 → 部分一致
+    if name in customers:
+        match = customers[name]
+    else:
+        for s, c in customers.items():
+            if name and (name in s or s in name):
+                match = c
+                break
+    if match is None:
+        return json.dumps(
+            {
+                "error": f"顧客マスタに '{name}' が見つかりませんでした。病院/クリニック名を確認してください。",
+                "available_hint": list(customers.keys())[:5],
+            },
+            ensure_ascii=False,
+        )
+    return json.dumps(match, ensure_ascii=False, indent=2)
+
+
 @tool
 def hearing_template(
     error_code: Annotated[

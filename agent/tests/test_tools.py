@@ -23,6 +23,7 @@ import pytest
 
 from agent.tools import (
     create_dispatch_ticket,
+    customer_lookup,
     exact_lookup,
     get_dispatch_ticket,
     hearing_template,
@@ -170,6 +171,29 @@ class TestImageSearch:
 
     def test_tool_name(self):
         assert image_search.name == "image_search"
+
+
+class TestCustomerLookup:
+    def test_contract_customer(self):
+        r = json.loads(customer_lookup.invoke({"site_name": "東京湾岸総合病院"}))
+        assert r["maintenance_contract"] == "あり"
+        assert len(r["products"]) >= 1
+
+    def test_non_contract_customer(self):
+        r = json.loads(customer_lookup.invoke({"site_name": "千葉ニュータウン病院"}))
+        assert r["maintenance_contract"] == "なし"
+        assert "有償" in r["billing_note"]
+
+    def test_partial_match(self):
+        r = json.loads(customer_lookup.invoke({"site_name": "千葉ニュータウン"}))
+        assert r["site_name"] == "千葉ニュータウン病院"
+
+    def test_unknown(self):
+        r = json.loads(customer_lookup.invoke({"site_name": "存在しない病院"}))
+        assert "error" in r
+
+    def test_tool_name(self):
+        assert customer_lookup.name == "customer_lookup"
 
 
 class TestHearingTemplate:

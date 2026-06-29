@@ -1,0 +1,350 @@
+{
+  "_note": "顧客マスタ(合成)。病院/クリニックごとの使用製品と保守契約状況。コールセンター/RSEが照会する。",
+  "customers": {
+    "京都西陣病院": {
+      "site_name": "京都西陣病院",
+      "maintenance_contract": "あり",
+      "contract_plan": "プレミア",
+      "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
+      "products": [
+        {
+          "model": "EVS-X1000-VP",
+          "name": "ビデオプロセッサー",
+          "serial": "VP-1007"
+        },
+        {
+          "model": "EVS-X1000-LS",
+          "name": "LED光源",
+          "serial": "LS-1007"
+        },
+        {
+          "model": "EVS-X1000-GS",
+          "name": "上部消化管スコープ",
+          "serial": "GS-1007"
+        }
+      ]
+    },
+    "仙台みなと医療センター": {
+      "site_name": "仙台みなと医療センター",
+      "maintenance_contract": "あり",
+      "contract_plan": "スタンダード",
+      "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
+      "products": [
+        {
+          "model": "EVS-X1000-VP",
+          "name": "ビデオプロセッサー",
+          "serial": "VP-1014"
+        },
+        {
+          "model": "EVS-X1000-LS",
+          "name": "LED光源",
+          "serial": "LS-1014"
+        },
+        {
+          "model": "EVS-X1000-GS",
+          "name": "上部消化管スコープ",
+          "serial": "GS-1014"
+        }
+      ]
+    },
+    "北海道中央病院": {
+      "site_name": "北海道中央病院",
+      "maintenance_contract": "あり",
+      "contract_plan": "スタンダード",
+      "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
+      "products": [
+        {
+          "model": "EVS-X1000-VP",
+          "name": "ビデオプロセッサー",
+          "serial": "VP-1021"
+        },
+        {
+          "model": "EVS-X1000-LS",
+          "name": "LED光源",
+          "serial": "LS-1021"
+        },
+        {
+          "model": "EVS-X1000-GS",
+          "name": "上部消化管スコープ",
+          "serial": "GS-1021"
+        }
+      ]
+    },
+    "千葉ニュータウン病院": {
+      "site_name": "千葉ニュータウン病院",
+      "maintenance_contract": "なし",
+      "contract_plan": null,
+      "billing_note": "保守契約なし。派遣工数・交換部品は有償（事前に口頭確認が必要）",
+      "products": [
+        {
+          "model": "EVS-X1000-VP",
+          "name": "ビデオプロセッサー",
+          "serial": "VP-1028"
+        },
+        {
+          "model": "EVS-X1000-LS",
+          "name": "LED光源",
+          "serial": "LS-1028"
+        },
+        {
+          "model": "EVS-X1000-GS",
+          "name": "上部消化管スコープ",
+          "serial": "GS-1028"
+        }
+      ]
+    },
+    "名古屋医療センター": {
+      "site_name": "名古屋医療センター",
+      "maintenance_contract": "あり",
+      "contract_plan": "プレミア",
+      "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
+      "products": [
+        {
+          "model": "EVS-X1000-VP",
+          "name": "ビデオプロセッサー",
+          "serial": "VP-1035"
+        },
+        {
+          "model": "EVS-X1000-LS",
+          "name": "LED光源",
+          "serial": "LS-1035"
+        },
+        {
+          "model": "EVS-X1000-GS",
+          "name": "上部消化管スコープ",
+          "serial": "GS-1035"
+        }
+      ]
+    },
+    "埼京総合病院": {
+      "site_name": "埼京総合病院",
+      "maintenance_contract": "あり",
+      "contract_plan": "スタンダード",
+      "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
+      "products": [
+        {
+          "model": "EVS-X1000-VP",
+          "name": "ビデオプロセッサー",
+          "serial": "VP-1042"
+        },
+        {
+          "model": "EVS-X1000-LS",
+          "name": "LED光源",
+          "serial": "LS-1042"
+        },
+        {
+          "model": "EVS-X1000-GS",
+          "name": "上部消化管スコープ",
+          "serial": "GS-1042"
+        }
+      ]
+    },
+    "大阪南部総合病院": {
+      "site_name": "大阪南部総合病院",
+      "maintenance_contract": "あり",
+      "contract_plan": "スタンダード",
+      "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
+      "products": [
+        {
+          "model": "EVS-X1000-VP",
+          "name": "ビデオプロセッサー",
+          "serial": "VP-1049"
+        },
+        {
+          "model": "EVS-X1000-LS",
+          "name": "LED光源",
+          "serial": "LS-1049"
+        },
+        {
+          "model": "EVS-X1000-GS",
+          "name": "上部消化管スコープ",
+          "serial": "GS-1049"
+        }
+      ]
+    },
+    "広島中央病院": {
+      "site_name": "広島中央病院",
+      "maintenance_contract": "なし",
+      "contract_plan": null,
+      "billing_note": "保守契約なし。派遣工数・交換部品は有償（事前に口頭確認が必要）",
+      "products": [
+        {
+          "model": "EVS-X1000-VP",
+          "name": "ビデオプロセッサー",
+          "serial": "VP-1056"
+        },
+        {
+          "model": "EVS-X1000-LS",
+          "name": "LED光源",
+          "serial": "LS-1056"
+        },
+        {
+          "model": "EVS-X1000-GS",
+          "name": "上部消化管スコープ",
+          "serial": "GS-1056"
+        }
+      ]
+    },
+    "札幌北部クリニック病院": {
+      "site_name": "札幌北部クリニック病院",
+      "maintenance_contract": "なし",
+      "contract_plan": null,
+      "billing_note": "保守契約なし。派遣工数・交換部品は有償（事前に口頭確認が必要）",
+      "products": [
+        {
+          "model": "EVS-X1000-VP",
+          "name": "ビデオプロセッサー",
+          "serial": "VP-1063"
+        },
+        {
+          "model": "EVS-X1000-LS",
+          "name": "LED光源",
+          "serial": "LS-1063"
+        },
+        {
+          "model": "EVS-X1000-GS",
+          "name": "上部消化管スコープ",
+          "serial": "GS-1063"
+        }
+      ]
+    },
+    "東京湾岸総合病院": {
+      "site_name": "東京湾岸総合病院",
+      "maintenance_contract": "あり",
+      "contract_plan": "プレミア",
+      "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
+      "products": [
+        {
+          "model": "EVS-X1000-VP",
+          "name": "ビデオプロセッサー",
+          "serial": "VP-1070"
+        },
+        {
+          "model": "EVS-X1000-LS",
+          "name": "LED光源",
+          "serial": "LS-1070"
+        },
+        {
+          "model": "EVS-X1000-GS",
+          "name": "上部消化管スコープ",
+          "serial": "GS-1070"
+        }
+      ]
+    },
+    "横浜さくら病院": {
+      "site_name": "横浜さくら病院",
+      "maintenance_contract": "あり",
+      "contract_plan": "スタンダード",
+      "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
+      "products": [
+        {
+          "model": "EVS-X1000-VP",
+          "name": "ビデオプロセッサー",
+          "serial": "VP-1077"
+        },
+        {
+          "model": "EVS-X1000-LS",
+          "name": "LED光源",
+          "serial": "LS-1077"
+        },
+        {
+          "model": "EVS-X1000-GS",
+          "name": "上部消化管スコープ",
+          "serial": "GS-1077"
+        }
+      ]
+    },
+    "神戸ベイサイド病院": {
+      "site_name": "神戸ベイサイド病院",
+      "maintenance_contract": "あり",
+      "contract_plan": "スタンダード",
+      "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
+      "products": [
+        {
+          "model": "EVS-X1000-VP",
+          "name": "ビデオプロセッサー",
+          "serial": "VP-1084"
+        },
+        {
+          "model": "EVS-X1000-LS",
+          "name": "LED光源",
+          "serial": "LS-1084"
+        },
+        {
+          "model": "EVS-X1000-GS",
+          "name": "上部消化管スコープ",
+          "serial": "GS-1084"
+        }
+      ]
+    },
+    "福岡みらい病院": {
+      "site_name": "福岡みらい病院",
+      "maintenance_contract": "なし",
+      "contract_plan": null,
+      "billing_note": "保守契約なし。派遣工数・交換部品は有償（事前に口頭確認が必要）",
+      "products": [
+        {
+          "model": "EVS-X1000-VP",
+          "name": "ビデオプロセッサー",
+          "serial": "VP-1091"
+        },
+        {
+          "model": "EVS-X1000-LS",
+          "name": "LED光源",
+          "serial": "LS-1091"
+        },
+        {
+          "model": "EVS-X1000-GS",
+          "name": "上部消化管スコープ",
+          "serial": "GS-1091"
+        }
+      ]
+    },
+    "金沢医療センター": {
+      "site_name": "金沢医療センター",
+      "maintenance_contract": "あり",
+      "contract_plan": "プレミア",
+      "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
+      "products": [
+        {
+          "model": "EVS-X1000-VP",
+          "name": "ビデオプロセッサー",
+          "serial": "VP-1098"
+        },
+        {
+          "model": "EVS-X1000-LS",
+          "name": "LED光源",
+          "serial": "LS-1098"
+        },
+        {
+          "model": "EVS-X1000-GS",
+          "name": "上部消化管スコープ",
+          "serial": "GS-1098"
+        }
+      ]
+    },
+    "静岡中央病院": {
+      "site_name": "静岡中央病院",
+      "maintenance_contract": "あり",
+      "contract_plan": "スタンダード",
+      "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
+      "products": [
+        {
+          "model": "EVS-X1000-VP",
+          "name": "ビデオプロセッサー",
+          "serial": "VP-1105"
+        },
+        {
+          "model": "EVS-X1000-LS",
+          "name": "LED光源",
+          "serial": "LS-1105"
+        },
+        {
+          "model": "EVS-X1000-GS",
+          "name": "上部消化管スコープ",
+          "serial": "GS-1105"
+        }
+      ]
+    }
+  }
+}
