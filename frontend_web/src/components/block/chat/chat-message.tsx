@@ -214,10 +214,17 @@ interface SourceRef {
   image?: string; // 図面・画像のURL（モーダルで表示）
 }
 
-// 既知の参照アセット（ラベルのキーワード → 公開URL）。モックでは構成図SVGを配信。
+// 既知の参照アセット（ラベルのキーワード → 公開アセットの相対パス）。モックでは構成図SVGを配信。
 const SOURCE_ASSETS: { keyword: RegExp; url: string }[] = [
-  { keyword: /構成図|component_diagram|図面/, url: '/reference/component_diagram.svg' },
+  { keyword: /構成図|component_diagram|図面/, url: 'reference/component_diagram.svg' },
 ];
+
+// アプリはベースパス配下で配信されることがあるため、相対/絶対パスを BASE_URL で解決する。
+function resolveAssetUrl(path: string): string {
+  if (/^(https?:)?\/\//.test(path) || path.startsWith('data:')) return path;
+  const base = import.meta.env.BASE_URL || '/';
+  return `${base.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
+}
 
 function resolveSourceImage(label: string, content: string): string | undefined {
   // 本文に「画像:」「image:」でURLが明示されていればそれを使う
@@ -773,7 +780,7 @@ function SourcesCard({ sources }: { sources: SourceRef[] }) {
           )}
           {active?.image && (
             <img
-              src={active.image}
+              src={resolveAssetUrl(active.image)}
               alt={active.label}
               className="mt-2 w-full rounded-md border border-border bg-white"
             />
