@@ -23,6 +23,7 @@ function messageText(msg: ChatMessageEvent): string {
 function deriveSteps(
   msg: ChatMessageEvent,
   isFirstUserPrompt: boolean,
+  persona: 'FSE' | 'RSE' | null,
   t: (s: string) => string
 ): { label: string; artifact?: string }[] {
   const text = messageText(msg).trim();
@@ -34,7 +35,8 @@ function deriveSteps(
     if (text.startsWith('以下の派遣ブリーフィングをFSEにリリース')) return [];
     if (text.startsWith('以下の内容でディスパッチ票を発行')) return [];
     if (text.startsWith('以下のネクストアクションをFSEにリリース')) return [];
-    return [{ label: isFirstUserPrompt ? t('事案入力') : t('RSE入力') }];
+    if (isFirstUserPrompt) return [{ label: t('事案入力') }];
+    return [{ label: persona === 'FSE' ? t('FSE入力') : t('RSE入力') }];
   }
 
   if (msg.role === 'assistant') {
@@ -77,13 +79,27 @@ export function ProcessMap({
   const { t } = useTranslation();
 
   const steps = useMemo<ProcessStep[]>(() => {
+    // 会話冒頭の従業員IDからペルソナを判定（FSE####/RSE####）
+    let persona: 'FSE' | 'RSE' | null = null;
+    for (const e of events) {
+      if (!isMessageStateEvent(e)) continue;
+      const m = e.value;
+      if (m.role !== 'user') continue;
+      const txt = messageText(m).trim();
+      const idm = txt.match(EMPLOYEE_ID_RE);
+      if (idm) {
+        persona = idm[1].toUpperCase() === 'FSE' ? 'FSE' : 'RSE';
+        break;
+      }
+    }
+
     const result: ProcessStep[] = [];
     let seenFirstUserPrompt = false;
     for (const e of events) {
       if (!isMessageStateEvent(e)) continue;
       const msg = e.value;
       const isFirstUserPrompt = msg.role === 'user' && !seenFirstUserPrompt;
-      const derived = deriveSteps(msg, isFirstUserPrompt, t);
+      const derived = deriveSteps(msg, isFirstUserPrompt, persona, t);
       if (
         msg.role === 'user' &&
         derived.length > 0 &&
@@ -93,6 +109,17 @@ export function ProcessMap({
       }
       for (const d of derived) {
         result.push({ id: msg.id, artifact: d.artifact, label: d.label });
+      }
+    }
+
+    // 同一ラベルが複数回出る場合は連番 (1)(2)… を付与
+    const total: Record<string, number> = {};
+    for (const s of result) total[s.label] = (total[s.label] ?? 0) + 1;
+    const seen: Record<string, number> = {};
+    for (const s of result) {
+      if (total[s.label] > 1) {
+        seen[s.label] = (seen[s.label] ?? 0) + 1;
+        s.label = `${s.label} (${seen[s.label]})`;
       }
     }
     return result;
