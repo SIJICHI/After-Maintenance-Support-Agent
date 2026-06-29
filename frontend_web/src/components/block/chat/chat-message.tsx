@@ -1162,33 +1162,57 @@ export function TextContentPart({ content }: { content: string }) {
   return (
     <>
       <Markdown>{text}</Markdown>
-      {triage && triage.length > 0 && <TriageCard fields={triage} />}
+      {triage && triage.length > 0 && (
+        <div data-artifact="triage">
+          <TriageCard fields={triage} />
+        </div>
+      )}
       {steps.length > 0 && (
-        <StepChecklist
-          steps={steps}
-          completeQuestion={completeQuestion}
-          completeChoices={completeChoices}
-        />
+        <div data-artifact="steps">
+          <StepChecklist
+            steps={steps}
+            completeQuestion={completeQuestion}
+            completeChoices={completeChoices}
+          />
+        </div>
       )}
       {hearing && hearing.length > 0 && (
-        <StepChecklist
-          steps={hearing}
-          title={t('Hearing checklist (confirm with customer)')}
-          itemHeader={t('Item to confirm')}
-          detailsHeader={t('Points')}
-          notesHeader={t('Memo')}
-          storageNs="hearing"
-          submit={{
-            label: t('Update triage & recipe with these results'),
-            prefix:
-              '以下のヒアリング結果です。これを踏まえてトリアージを更新し、FSEへ送るレシピ（派遣ブリーフィング）をドラフトしてください。対象のディスパッチ番号が分かる場合は save_hearing_results で記録してください。',
-          }}
-        />
+        <div data-artifact="hearing">
+          <StepChecklist
+            steps={hearing}
+            title={t('Hearing checklist (confirm with customer)')}
+            itemHeader={t('Item to confirm')}
+            detailsHeader={t('Points')}
+            notesHeader={t('Memo')}
+            storageNs="hearing"
+            submit={{
+              label: t('Update triage & recipe with these results'),
+              prefix:
+                '以下のヒアリング結果です。これを踏まえてトリアージを更新し、FSEへ送るレシピ（派遣ブリーフィング）をドラフトしてください。対象のディスパッチ番号が分かる場合は save_hearing_results で記録してください。',
+            }}
+          />
+        </div>
       )}
-      {rseActions && <EditableActionTable rows={rseActions} />}
-      {briefing && <DispatchBriefingCard briefing={briefing} />}
-      {handoff && <HandoffDraftCard handoff={handoff} />}
-      {report && <ReportCard report={report} dispatchId={reportDispatchId} />}
+      {rseActions && (
+        <div data-artifact="rse-actions">
+          <EditableActionTable rows={rseActions} />
+        </div>
+      )}
+      {briefing && (
+        <div data-artifact="briefing">
+          <DispatchBriefingCard briefing={briefing} />
+        </div>
+      )}
+      {handoff && (
+        <div data-artifact="handoff">
+          <HandoffDraftCard handoff={handoff} />
+        </div>
+      )}
+      {report && (
+        <div data-artifact="report">
+          <ReportCard report={report} dispatchId={reportDispatchId} />
+        </div>
+      )}
       {question && <div className="mt-3 body font-medium">{question}</div>}
       {choices.length > 0 && <QuickReplies choices={choices} />}
     </>
