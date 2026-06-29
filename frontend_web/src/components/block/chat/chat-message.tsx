@@ -219,11 +219,18 @@ const SOURCE_ASSETS: { keyword: RegExp; url: string }[] = [
   { keyword: /構成図|component_diagram|図面/, url: 'reference/component_diagram.svg' },
 ];
 
+// 公開アセットのファイル名（エージェントがサーバーのファイルシステム絶対パスを返しても、
+// ファイル名で public/reference 配下の配信URLにマップする）。
+const KNOWN_ASSET_FILES = new Set(['component_diagram.svg']);
+
 // アプリはベースパス配下で配信されることがあるため、相対/絶対パスを BASE_URL で解決する。
 function resolveAssetUrl(path: string): string {
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+  const file = path.split(/[\\/]/).pop() || path;
+  // 既知アセットはファイル名で公開URLに解決（FSパス・任意ディレクトリでも表示可能に）
+  if (KNOWN_ASSET_FILES.has(file)) return `${base}/reference/${file}`;
   if (/^(https?:)?\/\//.test(path) || path.startsWith('data:')) return path;
-  const base = import.meta.env.BASE_URL || '/';
-  return `${base.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
+  return `${base}/${path.replace(/^\//, '')}`;
 }
 
 function resolveSourceImage(label: string, content: string): string | undefined {
@@ -483,8 +490,49 @@ interface HearingRow {
   checked: boolean;
 }
 
-// 編集可能なチェックリスト表。項目/詳細/メモを編集でき、行の追加・削除・チェックができる。
-// ヒアリング表・作業チェックリストなど共通のUXで用いる（基本思想: 全出力は編集可能なドラフト）。
+// 注意事項セル（読取専用）。各項目はセミコロン区切り。先頭が「!」の項目は安全重要事項として
+// 警告アイコン＋黄色で強調する。
+function NotesCell({ notes }: { notes: string }) {
+  const items = notes
+    .split(/[;；\n]/)
+    .map(n => n.trim())
+    .filter(Boolean);
+  if (items.length === 0) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  return (
+    <ul className="space-y-1">
+      {items.map((raw, i) => {
+        const isSafety = /^[!！]/.test(raw);
+        const text = raw.replace(/^[!！]\s*/, '');
+        if (isSafety) {
+          return (
+            <li
+              key={i}
+              className={`
+                flex items-start gap-1.5 rounded border border-yellow-400/50 bg-yellow-500/15
+                px-2 py-1 text-yellow-300
+              `}
+            >
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+              <span className="font-medium">{text}</span>
+            </li>
+          );
+        }
+        return (
+          <li key={i} className="flex items-start gap-1.5">
+            <span className="mt-1.5 size-1 shrink-0 rounded-full bg-muted-foreground" />
+            <span>{text}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+// 編集可能なチェックリスト表。項目/詳細を編集でき、行の追加・削除・チェックができる。
+// 注意事項列は notesMode で切替: 'highlight'=安全ハイライト読取専用(作業チェック表),
+// 'edit'=編集可能テキスト(ヒアリングのメモ等)。
 function StepChecklist({
   steps,
   completeQuestion,
@@ -495,6 +543,8 @@ function StepChecklist({
   notesHeader,
   storageNs = 'steps',
   submit,
+  notesMode = 'highlight',
+  notesPlaceholder,
 }: {
   steps: StepRow[];
   completeQuestion?: string;
@@ -505,6 +555,8 @@ function StepChecklist({
   notesHeader?: string;
   storageNs?: string;
   submit?: { label: string; prefix: string };
+  notesMode?: 'highlight' | 'edit';
+  notesPlaceholder?: string;
 }) {
   const { t } = useTranslation();
   const ctx = useChatContext();
@@ -602,13 +654,17 @@ function StepChecklist({
                   />
                 </td>
                 <td className="px-3 py-2">
-                  <textarea
-                    value={row.memo}
-                    rows={2}
-                    placeholder={t('注意事項（1行に1項目、安全は先頭に!）')}
-                    onChange={e => updateRow(i, { memo: e.target.value })}
-                    className={inputCls}
-                  />
+                  {notesMode === 'edit' ? (
+                    <textarea
+                      value={row.memo}
+                      rows={2}
+                      placeholder={notesPlaceholder ?? t('メモ')}
+                      onChange={e => updateRow(i, { memo: e.target.value })}
+                      className={inputCls}
+                    />
+                  ) : (
+                    <NotesCell notes={row.memo} />
+                  )}
                 </td>
                 <td className="px-1 py-2 text-center">
                   <button
@@ -1317,6 +1373,8 @@ export function TextContentPart({ content }: { content: string }) {
             itemHeader={t('確認項目')}
             detailsHeader={t('確認の観点')}
             notesHeader={t('メモ')}
+            notesMode="edit"
+            notesPlaceholder={t('確認結果を記入')}
             storageNs="hearing"
             submit={{
               label: t('この結果でトリアージ・レシピを更新'),
