@@ -28,6 +28,12 @@ import { useChatContext } from '@/components/block/chat/hooks/use-chat-context';
 import { Badge } from '@/components/ui/badge';
 import { Markdown } from '@/components/block/markdown';
 import { useTranslation } from '@/lib/i18n';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface ChatMessageErrorBoundaryProps {
   children: ReactNode;
@@ -108,6 +114,7 @@ const RSE_ACTIONS_REGEX = /\[\[rse_actions\]\]\s*([\s\S]*?)\s*\[\[\/rse_actions\
 const HEARING_REGEX = /\[\[hearing\]\]\s*([\s\S]*?)\s*\[\[\/hearing\]\]/;
 const BRIEFING_REGEX = /\[\[dispatch_briefing\]\]\s*([\s\S]*?)\s*\[\[\/dispatch_briefing\]\]/;
 const TRIAGE_REGEX = /\[\[triage\]\]\s*([\s\S]*?)\s*\[\[\/triage\]\]/;
+const SOURCES_REGEX = /\[\[sources\]\]\s*([\s\S]*?)\s*\[\[\/sources\]\]/;
 
 interface StepRow {
   item: string;
@@ -199,6 +206,36 @@ function parseTriage(content: string): { rest: string; fields: TriageField[] | n
     })
     .filter(f => f.label || f.value);
   return { rest: content.replace(TRIAGE_REGEX, '').trimEnd(), fields };
+}
+
+interface SourceRef {
+  label: string;
+  content: string;
+}
+
+// [[sources]] を「### ラベル」見出し＋本文のブロックとして解析する。
+function parseSources(content: string): { rest: string; sources: SourceRef[] | null } {
+  const match = content.match(SOURCES_REGEX);
+  if (!match) {
+    return { rest: content, sources: null };
+  }
+  const body = match[1];
+  const sources: SourceRef[] = [];
+  const parts = body.split(/^###\s+/m);
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const nl = trimmed.indexOf('\n');
+    if (nl < 0) {
+      sources.push({ label: trimmed, content: '' });
+    } else {
+      sources.push({ label: trimmed.slice(0, nl).trim(), content: trimmed.slice(nl + 1).trim() });
+    }
+  }
+  return {
+    rest: content.replace(SOURCES_REGEX, '').trimEnd(),
+    sources: sources.length ? sources : null,
+  };
 }
 
 interface DispatchBriefing {
@@ -341,12 +378,14 @@ function parseContent(content: string): {
   hearing: StepRow[] | null;
   briefing: DispatchBriefing | null;
   triage: TriageField[] | null;
+  sources: SourceRef[] | null;
 } {
   const stepsResult = parseSteps(content);
   const rseActionsResult = parseRseActions(stepsResult.rest);
   const hearingResult = parseHearing(rseActionsResult.rest);
   const triageResult = parseTriage(hearingResult.rest);
-  const briefingResult = parseBriefing(triageResult.rest);
+  const sourcesResult = parseSources(triageResult.rest);
+  const briefingResult = parseBriefing(sourcesResult.rest);
   const handoffResult = parseHandoff(briefingResult.rest);
   const completeResult = parseCompleteAction(handoffResult.rest);
   const reportMatch = completeResult.rest.match(REPORT_REGEX);
@@ -378,6 +417,7 @@ function parseContent(content: string): {
     hearing: hearingResult.rows,
     briefing: briefingResult.briefing,
     triage: triageResult.fields,
+    sources: sourcesResult.sources,
   };
 }
 
@@ -664,6 +704,55 @@ function QuickReplies({ choices }: { choices: string[] }) {
 }
 
 // トリアージ表（現時点の推定原因・類似傾向）の編集カード。区分ごとの内容を編集できる。
+// 参照情報源カード。箇条書きで一覧表示し、各リンクのクリックで中身を別モーダルに表示する
+// （チャットを長くしないため、本文はモーダル側に出す）。
+function SourcesCard({ sources }: { sources: SourceRef[] }) {
+  const { t } = useTranslation();
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const active = openIndex !== null ? sources[openIndex] : null;
+
+  return (
+    <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
+      <div
+        className={`
+          flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2 caption-01
+          text-[var(--green-40)]
+        `}
+      >
+        <FileText className="size-4" />
+        {t('参照情報源')}
+      </div>
+      <ul className="flex flex-col gap-1 p-3">
+        {sources.map((s, i) => (
+          <li key={i} className="flex items-start gap-1.5">
+            <span className="mt-1.5 size-1 shrink-0 rounded-full bg-muted-foreground" />
+            <button
+              type="button"
+              onClick={() => setOpenIndex(i)}
+              className={cn(
+                'text-left body-secondary text-[var(--green-40)] underline-offset-2 hover:underline',
+                !s.content && 'pointer-events-none text-foreground no-underline'
+              )}
+            >
+              {s.label}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <Dialog open={openIndex !== null} onOpenChange={open => !open && setOpenIndex(null)}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{active?.label}</DialogTitle>
+          </DialogHeader>
+          <div className="body-secondary text-foreground!">
+            <Markdown>{active?.content ?? ''}</Markdown>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 function TriageCard({ fields }: { fields: TriageField[] }) {
   const { t } = useTranslation();
   const storageKey = useMemo(
@@ -1158,6 +1247,7 @@ export function TextContentPart({ content }: { content: string }) {
     hearing,
     briefing,
     triage,
+    sources,
   } = useMemo(() => parseContent(content ? content : ''), [content]);
   return (
     <>
@@ -1165,6 +1255,11 @@ export function TextContentPart({ content }: { content: string }) {
       {triage && triage.length > 0 && (
         <div data-artifact="triage">
           <TriageCard fields={triage} />
+        </div>
+      )}
+      {sources && sources.length > 0 && (
+        <div data-artifact="sources">
+          <SourcesCard sources={sources} />
         </div>
       )}
       {steps.length > 0 && (
