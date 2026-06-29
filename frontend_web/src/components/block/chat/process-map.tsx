@@ -114,7 +114,7 @@ export function ProcessMap({
 
   return (
     <div className="flex w-56 shrink-0 flex-col overflow-y-auto p-2">
-      <div className="mb-2 px-1 caption-01 text-green-400">{t('プロセスマップ')}</div>
+      <div className="mb-2 px-1 caption-01 text-[var(--green-40)]">{t('プロセスマップ')}</div>
       <ol className="flex flex-col gap-1">
         {steps.map((s, i) => (
           <li key={`${s.id}-${s.artifact ?? 'msg'}-${i}`}>
@@ -124,7 +124,7 @@ export function ProcessMap({
               className={cn(
                 `
                   w-full rounded-md border border-border bg-card px-3 py-2 text-left
-                  body-secondary text-green-400 transition-colors
+                  body-secondary text-[var(--green-40)] transition-colors
                   hover:bg-accent hover:text-accent-foreground
                 `
               )}

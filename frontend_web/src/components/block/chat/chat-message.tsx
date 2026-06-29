@@ -486,7 +486,7 @@ function StepChecklist({
       <div
         className={`
           flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2
-          caption-01 text-green-400
+          caption-01 text-[var(--green-40)]
         `}
       >
         <CheckCircle2 className="size-4" />
@@ -782,7 +782,7 @@ function DispatchBriefingCard({ briefing }: { briefing: DispatchBriefing }) {
       <div className="flex flex-col gap-3 p-3">
         {rows.map(({ key, label, multiline }) => (
           <label key={key} className="flex flex-col gap-1">
-            <span className="caption-01 text-green-400">{label}</span>
+            <span className="caption-01 text-[var(--green-40)]">{label}</span>
             {multiline ? (
               <textarea
                 value={fields[key]}
@@ -821,7 +821,7 @@ function DispatchBriefingCard({ briefing }: { briefing: DispatchBriefing }) {
             </button>
           </div>
         ) : (
-          <div className="caption-01 text-green-400">{t('FSEへリリース済み')}</div>
+          <div className="caption-01 text-[var(--green-40)]">{t('FSEへリリース済み')}</div>
         )}
       </div>
     </div>
@@ -958,7 +958,7 @@ function EditableActionTable({ rows: initialRows }: { rows: StepRow[] }) {
           </div>
         )}
         {released && (
-          <div className="caption-01 text-green-400">{t('FSEへリリース済み')}</div>
+          <div className="caption-01 text-[var(--green-40)]">{t('FSEへリリース済み')}</div>
         )}
       </div>
     </div>
@@ -1010,7 +1010,7 @@ function HandoffDraftCard({ handoff }: { handoff: HandoffDraft }) {
       <div className="flex flex-col gap-3 p-3">
         {rows.map(({ key, label }) => (
           <label key={key} className="flex flex-col gap-1">
-            <span className="caption-01 text-green-400">{label}</span>
+            <span className="caption-01 text-[var(--green-40)]">{label}</span>
             <textarea
               value={fields[key]}
               disabled={issued || isAgentRunning}
@@ -1090,7 +1090,7 @@ function ReportCard({ report, dispatchId }: { report: string; dispatchId?: strin
       <div
         className={`
           flex items-center justify-between gap-2 border-b border-border bg-muted/30
-          px-3 py-2 caption-01 text-green-400
+          px-3 py-2 caption-01 text-[var(--green-40)]
         `}
       >
         <span className="flex items-center gap-2">
@@ -1312,7 +1312,7 @@ function ToolInvocationCard({
           <CheckCircle2
             className={`
               ml-auto size-4 text-green-500
-              dark:text-green-400
+              dark:text-[var(--green-40)]
             `}
           />
         ) : (
