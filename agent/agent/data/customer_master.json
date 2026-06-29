@@ -1,8 +1,8 @@
 {
   "_note": "顧客マスタ(合成)。病院/クリニックごとの使用製品と保守契約状況。コールセンター/RSEが照会する。",
   "customers": {
-    "京都西陣病院": {
-      "site_name": "京都西陣病院",
+    "サンプル総合病院A": {
+      "site_name": "サンプル総合病院A",
       "maintenance_contract": "あり",
       "contract_plan": "プレミア",
       "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
@@ -24,8 +24,8 @@
         }
       ]
     },
-    "仙台みなと医療センター": {
-      "site_name": "仙台みなと医療センター",
+    "サンプル医療センターB": {
+      "site_name": "サンプル医療センターB",
       "maintenance_contract": "あり",
       "contract_plan": "スタンダード",
       "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
@@ -47,8 +47,8 @@
         }
       ]
     },
-    "北海道中央病院": {
-      "site_name": "北海道中央病院",
+    "サンプル総合病院C": {
+      "site_name": "サンプル総合病院C",
       "maintenance_contract": "あり",
       "contract_plan": "スタンダード",
       "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
@@ -70,8 +70,8 @@
         }
       ]
     },
-    "千葉ニュータウン病院": {
-      "site_name": "千葉ニュータウン病院",
+    "サンプル病院D": {
+      "site_name": "サンプル病院D",
       "maintenance_contract": "なし",
       "contract_plan": null,
       "billing_note": "保守契約なし。派遣工数・交換部品は有償（事前に口頭確認が必要）",
@@ -93,8 +93,8 @@
         }
       ]
     },
-    "名古屋医療センター": {
-      "site_name": "名古屋医療センター",
+    "サンプル医療センターE": {
+      "site_name": "サンプル医療センターE",
       "maintenance_contract": "あり",
       "contract_plan": "プレミア",
       "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
@@ -116,8 +116,8 @@
         }
       ]
     },
-    "埼京総合病院": {
-      "site_name": "埼京総合病院",
+    "サンプル総合病院F": {
+      "site_name": "サンプル総合病院F",
       "maintenance_contract": "あり",
       "contract_plan": "スタンダード",
       "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
@@ -139,8 +139,8 @@
         }
       ]
     },
-    "大阪南部総合病院": {
-      "site_name": "大阪南部総合病院",
+    "サンプル総合病院G": {
+      "site_name": "サンプル総合病院G",
       "maintenance_contract": "あり",
       "contract_plan": "スタンダード",
       "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
@@ -162,8 +162,8 @@
         }
       ]
     },
-    "広島中央病院": {
-      "site_name": "広島中央病院",
+    "サンプル病院H": {
+      "site_name": "サンプル病院H",
       "maintenance_contract": "なし",
       "contract_plan": null,
       "billing_note": "保守契約なし。派遣工数・交換部品は有償（事前に口頭確認が必要）",
@@ -185,8 +185,8 @@
         }
       ]
     },
-    "札幌北部クリニック病院": {
-      "site_name": "札幌北部クリニック病院",
+    "サンプルクリニックI": {
+      "site_name": "サンプルクリニックI",
       "maintenance_contract": "なし",
       "contract_plan": null,
       "billing_note": "保守契約なし。派遣工数・交換部品は有償（事前に口頭確認が必要）",
@@ -208,8 +208,8 @@
         }
       ]
     },
-    "東京湾岸総合病院": {
-      "site_name": "東京湾岸総合病院",
+    "サンプル総合病院J": {
+      "site_name": "サンプル総合病院J",
       "maintenance_contract": "あり",
       "contract_plan": "プレミア",
       "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
@@ -231,8 +231,8 @@
         }
       ]
     },
-    "横浜さくら病院": {
-      "site_name": "横浜さくら病院",
+    "サンプル病院K": {
+      "site_name": "サンプル病院K",
       "maintenance_contract": "あり",
       "contract_plan": "スタンダード",
       "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
@@ -254,8 +254,8 @@
         }
       ]
     },
-    "神戸ベイサイド病院": {
-      "site_name": "神戸ベイサイド病院",
+    "サンプル病院L": {
+      "site_name": "サンプル病院L",
       "maintenance_contract": "あり",
       "contract_plan": "スタンダード",
       "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
@@ -277,8 +277,8 @@
         }
       ]
     },
-    "福岡みらい病院": {
-      "site_name": "福岡みらい病院",
+    "サンプル病院M": {
+      "site_name": "サンプル病院M",
       "maintenance_contract": "なし",
       "contract_plan": null,
       "billing_note": "保守契約なし。派遣工数・交換部品は有償（事前に口頭確認が必要）",
@@ -300,8 +300,8 @@
         }
       ]
     },
-    "金沢医療センター": {
-      "site_name": "金沢医療センター",
+    "サンプル医療センターN": {
+      "site_name": "サンプル医療センターN",
       "maintenance_contract": "あり",
       "contract_plan": "プレミア",
       "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",
@@ -323,8 +323,8 @@
         }
       ]
     },
-    "静岡中央病院": {
-      "site_name": "静岡中央病院",
+    "サンプル総合病院O": {
+      "site_name": "サンプル総合病院O",
       "maintenance_contract": "あり",
       "contract_plan": "スタンダード",
       "billing_note": "保守契約内のため部品・工数は契約範囲（原則無償）",

@@ -175,18 +175,18 @@ class TestImageSearch:
 
 class TestCustomerLookup:
     def test_contract_customer(self):
-        r = json.loads(customer_lookup.invoke({"site_name": "東京湾岸総合病院"}))
+        r = json.loads(customer_lookup.invoke({"site_name": "サンプル総合病院J"}))
         assert r["maintenance_contract"] == "あり"
         assert len(r["products"]) >= 1
 
     def test_non_contract_customer(self):
-        r = json.loads(customer_lookup.invoke({"site_name": "千葉ニュータウン病院"}))
+        r = json.loads(customer_lookup.invoke({"site_name": "サンプル病院D"}))
         assert r["maintenance_contract"] == "なし"
         assert "有償" in r["billing_note"]
 
     def test_partial_match(self):
-        r = json.loads(customer_lookup.invoke({"site_name": "千葉ニュータウン"}))
-        assert r["site_name"] == "千葉ニュータウン病院"
+        r = json.loads(customer_lookup.invoke({"site_name": "病院D"}))
+        assert r["site_name"] == "サンプル病院D"
 
     def test_unknown(self):
         r = json.loads(customer_lookup.invoke({"site_name": "存在しない病院"}))
