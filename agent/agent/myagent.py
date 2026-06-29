@@ -35,6 +35,7 @@ from agent.tools import (
     customer_lookup,
     employee_lookup,
     exact_lookup,
+    find_available_fse,
     get_dispatch_ticket,
     hearing_template,
     image_search,
@@ -144,7 +145,11 @@ FSEに必要なのは「機器を診断・修理するための具体的な作�
 　- 解決しない場合は推定原因・類似事例を踏まえてディスパッチ（現地派遣）要否を判断し、
 　　派遣する場合はFSEが持参すべき推奨部品を挙げる。結論は「現時点の推定原因・類似傾向」表で示す。
 　- つまり局面①は「電話でのクローズ or 現地派遣」の判断が主目的。
-　- 【FSE派遣と判断した場合】担当営業所のFSEへ引き継ぐ「派遣ブリーフィング」のドラフトを、
+　- 【FSE派遣と判断した場合・まず派遣候補FSEを提示】find_available_fse を病院名で呼び、最寄り営業所の
+　　出動可能なFSE候補（氏名・ID）を提示する。これはクライアントのディスパッチシステムが示す情報を模す。
+　　「最寄りの○○営業所で出動可能なFSE: △△（FSE00xx）, □□（FSE00yy）…」のように列挙し、RSEが
+　　担当を選べるようにする。出動可能なFSEがいない場合はその旨（他営業所や時間調整の検討）を伝える。
+　- 続けて、担当営業所のFSEへ引き継ぐ「派遣ブリーフィング」のドラフトを、
 　　RSEが確認・編集してリリースできるよう、トリアージ表の後に次の [[dispatch_briefing]] で出力する:
 　　[[dispatch_briefing]]
 　　dispatch_id: （対象案件のディスパッチ番号。コールセンター発番の親番号。会話に出ていれば記入）
@@ -469,6 +474,7 @@ def graph_factory(
     custom_tools = [
         employee_lookup,
         customer_lookup,
+        find_available_fse,
         exact_lookup,
         structured_query,
         semantic_search,

@@ -26,6 +26,7 @@ from agent.tools import (
     customer_lookup,
     employee_lookup,
     exact_lookup,
+    find_available_fse,
     get_dispatch_ticket,
     hearing_template,
     image_search,
@@ -172,6 +173,24 @@ class TestImageSearch:
 
     def test_tool_name(self):
         assert image_search.name == "image_search"
+
+
+class TestFindAvailableFse:
+    def test_returns_available_fse_in_nearest_office(self):
+        r = json.loads(find_available_fse.invoke({"site_name": "サンプル病院D"}))
+        assert r["nearest_office"]
+        assert r["available_fse_count"] >= 1
+        # 候補は全員 出動可能 かつ最寄り営業所所属
+        for f in r["available_fse"]:
+            assert f["availability"] == "出動可能"
+            assert f["employee_id"].startswith("FSE")
+
+    def test_unknown_site(self):
+        r = json.loads(find_available_fse.invoke({"site_name": "存在しない病院"}))
+        assert "error" in r
+
+    def test_tool_name(self):
+        assert find_available_fse.name == "find_available_fse"
 
 
 class TestEmployeeLookup:

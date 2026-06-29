@@ -119,6 +119,49 @@ def _load_employees() -> dict[str, dict]:
 
 
 @tool
+def find_available_fse(
+    site_name: Annotated[str, "コール元の病院・クリニック名（部分一致可）"],
+) -> str:
+    """コール元の病院/クリニックの最寄り営業所に所属するFSEのうち、出動可能な候補を返す。
+    クライアントのディスパッチシステムが、RSEにFSE派遣候補を提示する役割を模したもの。
+    RSEがFSE派遣を判断する際に呼び、提示された候補から担当FSEを選ぶ。
+    """
+    customers = _load_customers()
+    name = site_name.strip()
+    cust = customers.get(name)
+    if cust is None:
+        for s, c in customers.items():
+            if name and (name in s or s in name):
+                cust = c
+                break
+    if cust is None:
+        return json.dumps(
+            {"error": f"顧客マスタに '{name}' が見つかりませんでした。"}, ensure_ascii=False
+        )
+    office = cust.get("nearest_office")
+    employees = _load_employees()
+    in_office = [
+        e for e in employees.values() if e.get("role") == "FSE" and e.get("office") == office
+    ]
+    available = [
+        {"employee_id": e["employee_id"], "name": e["name"], "availability": e["availability"]}
+        for e in in_office
+        if e.get("availability") == "出動可能"
+    ]
+    return json.dumps(
+        {
+            "site_name": cust.get("site_name"),
+            "nearest_office": office,
+            "available_fse_count": len(available),
+            "available_fse": available,
+            "office_fse_total": len(in_office),
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+
+
+@tool
 def employee_lookup(
     employee_id: Annotated[str, "従業員ID（例: RSE0001 / FSE0001）"],
 ) -> str:
