@@ -137,7 +137,31 @@ export function useAgUiChat({
 
   async function sendMessage(message: string) {
     const messageId = uuid();
-    agent.messages = [{ id: messageId, role: 'user', content: message }];
+
+    // 従業員ID（FSE####/RSE####）は一度入力されたらチャットごとに保持し、以降エージェントへ送る
+    // メッセージに自動付与する。これによりエージェントがIDを見失って再入力を求める問題を防ぐ。
+    const empIdKey = `dr-emp-id-${chatId}`;
+    const idInMsg = message.match(/\b(?:RSE|FSE)\d+\b/i);
+    if (idInMsg) {
+      try {
+        localStorage.setItem(empIdKey, idInMsg[0]);
+      } catch {
+        // ignore
+      }
+    }
+    let agentContent = message;
+    if (!idInMsg) {
+      let storedId: string | null = null;
+      try {
+        storedId = localStorage.getItem(empIdKey);
+      } catch {
+        // ignore
+      }
+      if (storedId) {
+        agentContent = `[従業員ID: ${storedId}]\n${message}`;
+      }
+    }
+    agent.messages = [{ id: messageId, role: 'user', content: agentContent }];
 
     const historyMessage = createTextMessageFromUserInput({
       message,
