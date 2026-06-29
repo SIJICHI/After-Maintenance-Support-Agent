@@ -174,6 +174,7 @@ class TestCustomModel:
 
         # Verify mocks were called correctly (NAT uses noop MCP factory in the wrapper; tools are not passed via __init__)
         mock_agent.assert_called_once_with(
+            llm=ANY,
             verbose=True,
             timeout=90,
             forwarded_headers=ANY,
@@ -288,6 +289,7 @@ class TestCustomModel:
 
         # Verify mocks were called correctly (NAT uses noop MCP factory in the wrapper; tools are not passed via __init__)
         mock_agent.assert_called_once_with(
+            llm=ANY,
             verbose=True,
             timeout=90,
             forwarded_headers=ANY,

@@ -20,7 +20,7 @@ import re
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import numpy as np
 import pandas as pd
@@ -41,7 +41,7 @@ DISPATCH_FILE = Path(__file__).parent / "dispatch_store.json"
 
 
 @lru_cache(maxsize=1)
-def _load_error_codes() -> dict[str, dict]:
+def _load_error_codes() -> dict[str, dict[str, Any]]:
     df = pd.read_csv(DATA_DIR / "error_codes.csv", encoding="utf-8-sig")
     return {row["error_code"]: row.to_dict() for _, row in df.iterrows()}
 
@@ -52,9 +52,9 @@ def _load_repair_history() -> pd.DataFrame:
 
 
 @lru_cache(maxsize=1)
-def _build_knowledge_chunks() -> list[dict]:
+def _build_knowledge_chunks() -> list[dict[str, Any]]:
     """Split service manual and veteran transcript into paragraph chunks."""
-    chunks: list[dict] = []
+    chunks: list[dict[str, Any]] = []
     for source_file in ["service_manual_excerpt.md", "veteran_interview_transcript.md"]:
         text = (DATA_DIR / source_file).read_text(encoding="utf-8")
         source = source_file.replace(".md", "")
@@ -65,7 +65,7 @@ def _build_knowledge_chunks() -> list[dict]:
 
 
 @lru_cache(maxsize=1)
-def _build_veteran_chunks() -> list[dict]:
+def _build_veteran_chunks() -> list[dict[str, Any]]:
     """Chunks from veteran interview transcript only."""
     text = (DATA_DIR / "veteran_interview_transcript.md").read_text(encoding="utf-8")
     source = "veteran_interview_transcript"
@@ -73,7 +73,14 @@ def _build_veteran_chunks() -> list[dict]:
     chunks = []
     for i, para in enumerate(paragraphs):
         speaker = "田中（ベテランエンジニア）" if "田中：" in para else "インタビュアー"
-        chunks.append({"source": source, "chunk_id": f"{source}#{i}", "speaker": speaker, "text": para})
+        chunks.append(
+            {
+                "source": source,
+                "chunk_id": f"{source}#{i}",
+                "speaker": speaker,
+                "text": para,
+            }
+        )
     return chunks
 
 
@@ -100,22 +107,25 @@ def _char_ngram_similarity(query: str, text: str, n: int = 2) -> float:
 
 
 @lru_cache(maxsize=1)
-def _load_hearing_templates() -> dict:
-    return json.loads(
+def _load_hearing_templates() -> dict[str, Any]:
+    data: dict[str, Any] = json.loads(
         (DATA_DIR / "hearing_templates.json").read_text(encoding="utf-8")
     )
+    return data
 
 
 @lru_cache(maxsize=1)
-def _load_customers() -> dict[str, dict]:
+def _load_customers() -> dict[str, dict[str, Any]]:
     data = json.loads((DATA_DIR / "customer_master.json").read_text(encoding="utf-8"))
-    return data.get("customers", {})
+    customers: dict[str, dict[str, Any]] = data.get("customers", {})
+    return customers
 
 
 @lru_cache(maxsize=1)
-def _load_employees() -> dict[str, dict]:
+def _load_employees() -> dict[str, dict[str, Any]]:
     data = json.loads((DATA_DIR / "employee_master.json").read_text(encoding="utf-8"))
-    return data.get("employees", {})
+    employees: dict[str, dict[str, Any]] = data.get("employees", {})
+    return employees
 
 
 @tool
@@ -136,15 +146,22 @@ def find_available_fse(
                 break
     if cust is None:
         return json.dumps(
-            {"error": f"顧客マスタに '{name}' が見つかりませんでした。"}, ensure_ascii=False
+            {"error": f"顧客マスタに '{name}' が見つかりませんでした。"},
+            ensure_ascii=False,
         )
     office = cust.get("nearest_office")
     employees = _load_employees()
     in_office = [
-        e for e in employees.values() if e.get("role") == "FSE" and e.get("office") == office
+        e
+        for e in employees.values()
+        if e.get("role") == "FSE" and e.get("office") == office
     ]
     available = [
-        {"employee_id": e["employee_id"], "name": e["name"], "availability": e["availability"]}
+        {
+            "employee_id": e["employee_id"],
+            "name": e["name"],
+            "availability": e["availability"],
+        }
         for e in in_office
         if e.get("availability") == "出動可能"
     ]
@@ -257,7 +274,10 @@ def exact_lookup(
     key = error_code.strip().upper()
     record = codes.get(key)
     if record is None:
-        return json.dumps({"error": f"エラーコード '{key}' は見つかりませんでした。"}, ensure_ascii=False)
+        return json.dumps(
+            {"error": f"エラーコード '{key}' は見つかりませんでした。"},
+            ensure_ascii=False,
+        )
     result = {
         "error_code": record.get("error_code"),
         "category": record.get("category_name"),
@@ -301,7 +321,10 @@ def structured_query(
         df = df[df["date"] <= date_to.strip()]
 
     if df.empty:
-        return json.dumps({"message": "条件に一致する修理履歴はありませんでした。", "records": []}, ensure_ascii=False)
+        return json.dumps(
+            {"message": "条件に一致する修理履歴はありませんでした。", "records": []},
+            ensure_ascii=False,
+        )
 
     summary = {
         "total_records": int(len(df)),
@@ -311,11 +334,23 @@ def structured_query(
     }
 
     records = df.head(20)[
-        ["ticket_id", "date", "site_name", "error_code", "symptom",
-         "technician_level", "resolution_minutes", "first_time_fix", "parts_replaced", "field_notes"]
+        [
+            "ticket_id",
+            "date",
+            "site_name",
+            "error_code",
+            "symptom",
+            "technician_level",
+            "resolution_minutes",
+            "first_time_fix",
+            "parts_replaced",
+            "field_notes",
+        ]
     ].to_dict(orient="records")
 
-    return json.dumps({"summary": summary, "records": records}, ensure_ascii=False, indent=2)
+    return json.dumps(
+        {"summary": summary, "records": records}, ensure_ascii=False, indent=2
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -335,12 +370,19 @@ def semantic_search(
     scored.sort(key=lambda x: x[1], reverse=True)
     top = scored[:5]
     results = [
-        {"source": c["source"], "chunk_id": c["chunk_id"], "score": round(s, 4), "excerpt": c["text"][:300]}
+        {
+            "source": c["source"],
+            "chunk_id": c["chunk_id"],
+            "score": round(s, 4),
+            "excerpt": c["text"][:300],
+        }
         for c, s in top
         if s > 0
     ]
     if not results:
-        return json.dumps({"message": "関連する情報が見つかりませんでした。"}, ensure_ascii=False)
+        return json.dumps(
+            {"message": "関連する情報が見つかりませんでした。"}, ensure_ascii=False
+        )
     return json.dumps(results, ensure_ascii=False, indent=2)
 
 
@@ -351,7 +393,9 @@ def semantic_search(
 
 @tool
 def voice_search(
-    query: Annotated[str, "検索クエリ（ベテランエンジニアの暗黙知・コツを検索したい場合に使う）"],
+    query: Annotated[
+        str, "検索クエリ（ベテランエンジニアの暗黙知・コツを検索したい場合に使う）"
+    ],
 ) -> str:
     """ベテランエンジニアの音声インタビュー文字起こしを意味検索する。
     エラーコード表にない暗黙知、現場のコツ、注意点を知りたい場合に特に有効。上位3件を返す。
@@ -362,12 +406,20 @@ def voice_search(
     scored.sort(key=lambda x: x[1], reverse=True)
     top = scored[:3]
     results = [
-        {"speaker": c["speaker"], "chunk_id": c["chunk_id"], "score": round(s, 4), "excerpt": c["text"][:400]}
+        {
+            "speaker": c["speaker"],
+            "chunk_id": c["chunk_id"],
+            "score": round(s, 4),
+            "excerpt": c["text"][:400],
+        }
         for c, s in top
         if s > 0
     ]
     if not results:
-        return json.dumps({"message": "関連するベテランの知見が見つかりませんでした。"}, ensure_ascii=False)
+        return json.dumps(
+            {"message": "関連するベテランの知見が見つかりませんでした。"},
+            ensure_ascii=False,
+        )
     return json.dumps(results, ensure_ascii=False, indent=2)
 
 
@@ -402,7 +454,9 @@ _COMPONENT_MAP: dict[str, str] = {
 
 @tool
 def image_search(
-    component_keyword: Annotated[str, "部位名キーワード（例: 送水, 湾曲部, ライトガイド, 防水）"],
+    component_keyword: Annotated[
+        str, "部位名キーワード（例: 送水, 湾曲部, ライトガイド, 防水）"
+    ],
 ) -> str:
     """内視鏡システムの構成図（SVG）から部位名をキーワードで検索し、画像パスと説明を返す。
     対処しようとしている部位の構造を確認したい場合に使う。
@@ -417,14 +471,18 @@ def image_search(
             break
 
     if matched_component is None:
-        best_key = max(_COMPONENT_MAP.keys(), key=lambda k: _char_ngram_similarity(kw, k))
+        best_key = max(
+            _COMPONENT_MAP.keys(), key=lambda k: _char_ngram_similarity(kw, k)
+        )
         if _char_ngram_similarity(kw, best_key) > 0.1:
             matched_component = _COMPONENT_MAP[best_key]
 
     if matched_component is None:
         available = list(_COMPONENT_MAP.values())
         return json.dumps(
-            {"message": f"'{kw}' に対応する部位が見つかりませんでした。利用可能な部位: {available[:10]}"},
+            {
+                "message": f"'{kw}' に対応する部位が見つかりませんでした。利用可能な部位: {available[:10]}"
+            },
             ensure_ascii=False,
         )
 
@@ -444,10 +502,10 @@ def image_search(
 # ---------------------------------------------------------------------------
 
 # プロセス内キャッシュ（同一サーバ稼働中は保持される）
-_DISPATCH_STORE: dict[str, dict] = {}
+_DISPATCH_STORE: dict[str, dict[str, Any]] = {}
 
 
-def _load_dispatch_store() -> dict[str, dict]:
+def _load_dispatch_store() -> dict[str, dict[str, Any]]:
     """JSONファイルからディスパッチ記録を読み込む（プロセス内 dict にマージ）。"""
     if not _DISPATCH_STORE and DISPATCH_FILE.exists():
         try:
@@ -481,9 +539,15 @@ def create_dispatch_ticket(
         "FSEとエージェントのやり取りの要約。発生症状・実施した切り分け/作業・確認できた結果・"
         "未解決の論点・現在の困りごとを、RSEがすぐ状況を把握できるよう簡潔にまとめた文章。",
     ],
-    error_codes: Annotated[str, "関連するエラーコード（カンマ区切り。なければ空文字列''）"],
-    recommended_parts: Annotated[str, "推定される推奨部品（カンマ区切り。なければ空文字列''）"],
-    open_questions: Annotated[str, "RSEに引き継ぐ未解決の確認事項・困りごと（なければ空文字列''）"],
+    error_codes: Annotated[
+        str, "関連するエラーコード（カンマ区切り。なければ空文字列''）"
+    ],
+    recommended_parts: Annotated[
+        str, "推定される推奨部品（カンマ区切り。なければ空文字列''）"
+    ],
+    open_questions: Annotated[
+        str, "RSEに引き継ぐ未解決の確認事項・困りごと（なければ空文字列''）"
+    ],
 ) -> str:
     """現場のFSEが切り分け・修理に行き詰まった際、HQのリモートサポートエンジニア（RSE）への
     相談票を発行する。実務では1案件＝1ディスパッチ番号で運用されるため、新しい独立番号は作らず、
@@ -560,7 +624,9 @@ def get_dispatch_ticket(
 
 @tool
 def release_action_plan(
-    dispatch_id: Annotated[str, "対象のディスパッチ番号（子番号。例: D-20260625-1234-01）"],
+    dispatch_id: Annotated[
+        str, "対象のディスパッチ番号（子番号。例: D-20260625-1234-01）"
+    ],
     action_plan: Annotated[
         str,
         "RSEが編集・確定したFSE向けネクストアクション。1行1作業で、各行は "
@@ -600,13 +666,18 @@ def release_action_plan(
 @tool
 def release_dispatch_briefing(
     dispatch_id: Annotated[
-        str, "対象案件のディスパッチ番号（コールセンター発番の親番号。例: D-20260626-7765）"
+        str,
+        "対象案件のディスパッチ番号（コールセンター発番の親番号。例: D-20260626-7765）",
     ],
     symptom: Annotated[str, "顧客から申告された症状・状況"],
     diagnosis: Annotated[str, "電話トリアージでの推定原因・所見"],
-    initial_response: Annotated[str, "顧客に案内・実施済みの初動対応（使用中止・隔離等）"],
+    initial_response: Annotated[
+        str, "顧客に案内・実施済みの初動対応（使用中止・隔離等）"
+    ],
     parts_to_bring: Annotated[str, "FSEが持参・準備すべき部品/治具（;区切り）"],
-    focus_points: Annotated[str, "現地でFSEに重点的に確認・実施させたい指示（;区切り）"],
+    focus_points: Annotated[
+        str, "現地でFSEに重点的に確認・実施させたい指示（;区切り）"
+    ],
     notes: Annotated[str, "申し送り・補足（顧客連絡先や訪問条件など）"],
 ) -> str:
     """RSEがFSE派遣を判断した際、担当営業所のFSEへ引き継ぐ「派遣ブリーフィング」を、
@@ -652,10 +723,12 @@ def release_dispatch_briefing(
 @tool
 def save_hearing_results(
     dispatch_id: Annotated[
-        str, "対象案件のディスパッチ番号（コールセンター発番の親番号。例: D-20260626-7765）"
+        str,
+        "対象案件のディスパッチ番号（コールセンター発番の親番号。例: D-20260626-7765）",
     ],
     hearing_results: Annotated[
-        str, "RSEが顧客への電話ヒアリングで確認した結果（確認項目と回答）をまとめたテキスト"
+        str,
+        "RSEが顧客への電話ヒアリングで確認した結果（確認項目と回答）をまとめたテキスト",
     ],
 ) -> str:
     """RSEが顧客電話で確認したヒアリング結果を、ディスパッチ番号に紐づけて保存（履歴）する。

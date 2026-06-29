@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 from datarobot_genai.core.agents import InvokeReturn, make_system_prompt
 from datarobot_genai.core.agents.base import UsageMetrics
@@ -462,10 +462,12 @@ released_action_plan も dispatch_briefing も無い場合は、その旨を伝�
 9. 追加情報を得た後は、その情報を踏まえたうえでツールを呼び出して診断・アドバイスを行う。\
 """
 
-prompt_template = ChatPromptTemplate.from_messages([
-    ("system", "会話履歴: {chat_history}"),
-    ("user", "{topic}"),
-])
+prompt_template = ChatPromptTemplate.from_messages(
+    [
+        ("system", "会話履歴: {chat_history}"),
+        ("user", "{topic}"),
+    ]
+)
 
 
 def graph_factory(
@@ -526,11 +528,17 @@ async def custompy_adaptor(
         forwarded_headers=forwarded_headers,
         authorization_context=authorization_context,
     )
+    # MCPサーバ構成のヘッダー（認証等）を転送ヘッダーにマージする（テンプレートの契約を維持）。
+    server_config = mcp_config.server_config
+    headers = server_config["headers"] if server_config else {}
+    forwarded_headers.update(headers)
     model_name = completion_create_params.get("model")
     agent = MyAgent(
-        llm=get_llm(model_name=model_name if model_name not in _PLACEHOLDER_MODELS else None),
-        verbose=completion_create_params.get("verbose", True),
-        timeout=completion_create_params.get("timeout", 90),
+        llm=get_llm(
+            model_name=model_name if model_name not in _PLACEHOLDER_MODELS else None
+        ),
+        verbose=cast(bool, completion_create_params.get("verbose", True)),
+        timeout=cast(int, completion_create_params.get("timeout", 90)),
         forwarded_headers=forwarded_headers,
     )
     return await agent_chat_completion_wrapper(

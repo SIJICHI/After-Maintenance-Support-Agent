@@ -19,8 +19,6 @@ call them via .invoke() with a dict of arguments.
 
 import json
 
-import pytest
-
 from agent.tools import (
     create_dispatch_ticket,
     customer_lookup,
@@ -67,29 +65,61 @@ class TestExactLookup:
 
 class TestStructuredQuery:
     def test_filter_by_error_code_returns_records(self):
-        result = json.loads(structured_query.invoke({
-            "error_code": "AWS-001", "model": "", "site_name": "", "date_from": "", "date_to": "",
-        }))
+        result = json.loads(
+            structured_query.invoke(
+                {
+                    "error_code": "AWS-001",
+                    "model": "",
+                    "site_name": "",
+                    "date_from": "",
+                    "date_to": "",
+                }
+            )
+        )
         assert "records" in result
         assert len(result["records"]) > 0
         assert "summary" in result
 
     def test_all_empty_filters_returns_all(self):
-        result = json.loads(structured_query.invoke({
-            "error_code": "", "model": "", "site_name": "", "date_from": "", "date_to": "",
-        }))
+        result = json.loads(
+            structured_query.invoke(
+                {
+                    "error_code": "",
+                    "model": "",
+                    "site_name": "",
+                    "date_from": "",
+                    "date_to": "",
+                }
+            )
+        )
         assert result["summary"]["total_records"] > 0
 
     def test_nonexistent_filter_returns_empty(self):
-        result = json.loads(structured_query.invoke({
-            "error_code": "ZZZ-999", "model": "", "site_name": "", "date_from": "", "date_to": "",
-        }))
+        result = json.loads(
+            structured_query.invoke(
+                {
+                    "error_code": "ZZZ-999",
+                    "model": "",
+                    "site_name": "",
+                    "date_from": "",
+                    "date_to": "",
+                }
+            )
+        )
         assert result.get("records") == [] or "message" in result
 
     def test_summary_contains_expected_keys(self):
-        result = json.loads(structured_query.invoke({
-            "error_code": "OPT-001", "model": "", "site_name": "", "date_from": "", "date_to": "",
-        }))
+        result = json.loads(
+            structured_query.invoke(
+                {
+                    "error_code": "OPT-001",
+                    "model": "",
+                    "site_name": "",
+                    "date_from": "",
+                    "date_to": "",
+                }
+            )
+        )
         if result.get("records"):
             summary = result["summary"]
             assert "total_records" in summary
@@ -97,9 +127,17 @@ class TestStructuredQuery:
             assert "avg_resolution_minutes" in summary
 
     def test_date_filter(self):
-        result = json.loads(structured_query.invoke({
-            "error_code": "", "model": "", "site_name": "", "date_from": "2024-01-01", "date_to": "2024-12-31",
-        }))
+        result = json.loads(
+            structured_query.invoke(
+                {
+                    "error_code": "",
+                    "model": "",
+                    "site_name": "",
+                    "date_from": "2024-01-01",
+                    "date_to": "2024-12-31",
+                }
+            )
+        )
         assert "summary" in result or "message" in result
 
     def test_tool_name(self):
@@ -117,7 +155,9 @@ class TestSemanticSearch:
         assert "score" in first
 
     def test_cln_topic_returns_results(self):
-        results = json.loads(semantic_search.invoke({"query": "防水 リークテスト 感染"}))
+        results = json.loads(
+            semantic_search.invoke({"query": "防水 リークテスト 感染"})
+        )
         assert isinstance(results, list)
         assert len(results) > 0
 
@@ -127,7 +167,9 @@ class TestSemanticSearch:
             assert isinstance(r["score"], float)
 
     def test_opt_topic(self):
-        results = json.loads(semantic_search.invoke({"query": "光学系 ノイズ イメージセンサー"}))
+        results = json.loads(
+            semantic_search.invoke({"query": "光学系 ノイズ イメージセンサー"})
+        )
         assert isinstance(results, list)
 
     def test_tool_name(self):
@@ -136,7 +178,9 @@ class TestSemanticSearch:
 
 class TestVoiceSearch:
     def test_returns_veteran_knowledge(self):
-        results = json.loads(voice_search.invoke({"query": "断線の前兆 アングルワイヤー"}))
+        results = json.loads(
+            voice_search.invoke({"query": "断線の前兆 アングルワイヤー"})
+        )
         assert isinstance(results, list)
         assert len(results) > 0
         first = results[0]
@@ -144,7 +188,9 @@ class TestVoiceSearch:
         assert "excerpt" in first
 
     def test_cln_query(self):
-        results = json.loads(voice_search.invoke({"query": "防水 感染対策 リークテスト"}))
+        results = json.loads(
+            voice_search.invoke({"query": "防水 感染対策 リークテスト"})
+        )
         assert isinstance(results, list)
         assert len(results) > 0
 
@@ -164,7 +210,9 @@ class TestImageSearch:
         assert "image_path" in result
 
     def test_unknown_keyword_returns_message_or_fuzzy(self):
-        result = json.loads(image_search.invoke({"component_keyword": "存在しない部位XYZ"}))
+        result = json.loads(
+            image_search.invoke({"component_keyword": "存在しない部位XYZ"})
+        )
         assert "message" in result or "image_path" in result
 
     def test_light_guide_keyword(self):
@@ -201,18 +249,36 @@ class TestEmployeeLookup:
         assert r["name"]
 
     def test_valid_fse_boundary(self):
-        assert json.loads(employee_lookup.invoke({"employee_id": "FSE0100"}))["found"] is True
-        assert json.loads(employee_lookup.invoke({"employee_id": "FSE0001"}))["found"] is True
+        assert (
+            json.loads(employee_lookup.invoke({"employee_id": "FSE0100"}))["found"]
+            is True
+        )
+        assert (
+            json.loads(employee_lookup.invoke({"employee_id": "FSE0001"}))["found"]
+            is True
+        )
 
     def test_out_of_range(self):
-        assert json.loads(employee_lookup.invoke({"employee_id": "FSE0101"}))["found"] is False
-        assert json.loads(employee_lookup.invoke({"employee_id": "RSE0021"}))["found"] is False
+        assert (
+            json.loads(employee_lookup.invoke({"employee_id": "FSE0101"}))["found"]
+            is False
+        )
+        assert (
+            json.loads(employee_lookup.invoke({"employee_id": "RSE0021"}))["found"]
+            is False
+        )
 
     def test_malformed_suffix(self):
-        assert json.loads(employee_lookup.invoke({"employee_id": "FSE15AB"}))["found"] is False
+        assert (
+            json.loads(employee_lookup.invoke({"employee_id": "FSE15AB"}))["found"]
+            is False
+        )
 
     def test_case_insensitive(self):
-        assert json.loads(employee_lookup.invoke({"employee_id": "rse0001"}))["found"] is True
+        assert (
+            json.loads(employee_lookup.invoke({"employee_id": "rse0001"}))["found"]
+            is True
+        )
 
     def test_tool_name(self):
         assert employee_lookup.name == "employee_lookup"
@@ -267,13 +333,15 @@ class TestHearingTemplate:
 class TestDispatch:
     def test_child_number_under_parent(self):
         result = json.loads(
-            create_dispatch_ticket.invoke({
-                "parent_dispatch_id": "D-20260101-1234",
-                "summary": "湾曲抵抗の切り分け中。CLN系疑い。",
-                "error_codes": "INS-003",
-                "recommended_parts": "湾曲部ゴム",
-                "open_questions": "リーク箇所未特定",
-            })
+            create_dispatch_ticket.invoke(
+                {
+                    "parent_dispatch_id": "D-20260101-1234",
+                    "summary": "湾曲抵抗の切り分け中。CLN系疑い。",
+                    "error_codes": "INS-003",
+                    "recommended_parts": "湾曲部ゴム",
+                    "open_questions": "リーク箇所未特定",
+                }
+            )
         )
         # 子番号は親番号配下に -01 形式で採番される
         assert result["dispatch_id"] == "D-20260101-1234-01"
@@ -283,26 +351,41 @@ class TestDispatch:
     def test_sequential_children_increment(self):
         parent = "D-20260202-5678"
         first = json.loads(
-            create_dispatch_ticket.invoke({
-                "parent_dispatch_id": parent, "summary": "a",
-                "error_codes": "", "recommended_parts": "", "open_questions": "",
-            })
+            create_dispatch_ticket.invoke(
+                {
+                    "parent_dispatch_id": parent,
+                    "summary": "a",
+                    "error_codes": "",
+                    "recommended_parts": "",
+                    "open_questions": "",
+                }
+            )
         )
         second = json.loads(
-            create_dispatch_ticket.invoke({
-                "parent_dispatch_id": parent, "summary": "b",
-                "error_codes": "", "recommended_parts": "", "open_questions": "",
-            })
+            create_dispatch_ticket.invoke(
+                {
+                    "parent_dispatch_id": parent,
+                    "summary": "b",
+                    "error_codes": "",
+                    "recommended_parts": "",
+                    "open_questions": "",
+                }
+            )
         )
         assert first["dispatch_id"] == f"{parent}-01"
         assert second["dispatch_id"] == f"{parent}-02"
 
     def test_empty_parent_generates_provisional(self):
         result = json.loads(
-            create_dispatch_ticket.invoke({
-                "parent_dispatch_id": "",
-                "summary": "親番号不明", "error_codes": "", "recommended_parts": "", "open_questions": "",
-            })
+            create_dispatch_ticket.invoke(
+                {
+                    "parent_dispatch_id": "",
+                    "summary": "親番号不明",
+                    "error_codes": "",
+                    "recommended_parts": "",
+                    "open_questions": "",
+                }
+            )
         )
         # 親不明なら暫定の親番号を採番し、その配下に -01
         assert result["dispatch_id"].endswith("-01")
@@ -310,13 +393,15 @@ class TestDispatch:
 
     def test_create_then_get_roundtrip(self):
         created = json.loads(
-            create_dispatch_ticket.invoke({
-                "parent_dispatch_id": "D-20260303-9999",
-                "summary": "送水不良の切り分け中",
-                "error_codes": "AWS-001",
-                "recommended_parts": "送水ポンプ",
-                "open_questions": "ポンプ単体故障か配管閉塞か未確定",
-            })
+            create_dispatch_ticket.invoke(
+                {
+                    "parent_dispatch_id": "D-20260303-9999",
+                    "summary": "送水不良の切り分け中",
+                    "error_codes": "AWS-001",
+                    "recommended_parts": "送水ポンプ",
+                    "open_questions": "ポンプ単体故障か配管閉塞か未確定",
+                }
+            )
         )
         dispatch_id = created["dispatch_id"]
         fetched = json.loads(get_dispatch_ticket.invoke({"dispatch_id": dispatch_id}))
@@ -327,7 +412,9 @@ class TestDispatch:
         assert fetched["open_questions"] == "ポンプ単体故障か配管閉塞か未確定"
 
     def test_get_unknown_returns_error(self):
-        result = json.loads(get_dispatch_ticket.invoke({"dispatch_id": "D-99999999-0000-99"}))
+        result = json.loads(
+            get_dispatch_ticket.invoke({"dispatch_id": "D-99999999-0000-99"})
+        )
         assert "error" in result
 
     def test_tool_names(self):
@@ -337,10 +424,15 @@ class TestDispatch:
 
     def test_release_action_plan_roundtrip(self):
         created = json.loads(
-            create_dispatch_ticket.invoke({
-                "parent_dispatch_id": "D-20260606-3333",
-                "summary": "s", "error_codes": "", "recommended_parts": "", "open_questions": "",
-            })
+            create_dispatch_ticket.invoke(
+                {
+                    "parent_dispatch_id": "D-20260606-3333",
+                    "summary": "s",
+                    "error_codes": "",
+                    "recommended_parts": "",
+                    "open_questions": "",
+                }
+            )
         )
         did = created["dispatch_id"]
         plan = "外装損傷の判定 | 湾曲部ゴム全周を接写;気泡発生位置を記録 | !減圧前に水中から引き上げる"
@@ -354,15 +446,21 @@ class TestDispatch:
 
     def test_release_unknown_dispatch_errors(self):
         result = json.loads(
-            release_action_plan.invoke({"dispatch_id": "D-00000000-0000-01", "action_plan": "x | y | z"})
+            release_action_plan.invoke(
+                {"dispatch_id": "D-00000000-0000-01", "action_plan": "x | y | z"}
+            )
         )
         assert "error" in result
 
     def test_save_hearing_results_history(self):
         did = "D-20260808-5151"
-        save_hearing_results.invoke({"dispatch_id": did, "hearing_results": "使用状況: 待機中"})
+        save_hearing_results.invoke(
+            {"dispatch_id": did, "hearing_results": "使用状況: 待機中"}
+        )
         r2 = json.loads(
-            save_hearing_results.invoke({"dispatch_id": did, "hearing_results": "症状: 断続的"})
+            save_hearing_results.invoke(
+                {"dispatch_id": did, "hearing_results": "症状: 断続的"}
+            )
         )
         assert r2["status"] == "hearing_recorded"
         fetched = json.loads(get_dispatch_ticket.invoke({"dispatch_id": did}))
@@ -373,15 +471,17 @@ class TestDispatch:
         # コールセンター発番のみで未登録の番号でも、ブリーフィングのリリースで新規登録される
         did = "D-20260707-4242"
         released = json.loads(
-            release_dispatch_briefing.invoke({
-                "dispatch_id": did,
-                "symptom": "送水不良",
-                "diagnosis": "送水ポンプ劣化疑い",
-                "initial_response": "使用中止を案内",
-                "parts_to_bring": "送水ポンプ;Oリング",
-                "focus_points": "防水点検;送水経路確認",
-                "notes": "午前訪問希望",
-            })
+            release_dispatch_briefing.invoke(
+                {
+                    "dispatch_id": did,
+                    "symptom": "送水不良",
+                    "diagnosis": "送水ポンプ劣化疑い",
+                    "initial_response": "使用中止を案内",
+                    "parts_to_bring": "送水ポンプ;Oリング",
+                    "focus_points": "防水点検;送水経路確認",
+                    "notes": "午前訪問希望",
+                }
+            )
         )
         assert released["status"] == "fse_dispatched"
         fetched = json.loads(get_dispatch_ticket.invoke({"dispatch_id": did}))
@@ -394,10 +494,15 @@ class TestDispatch:
 
         monkeypatch.setattr(dispatch_policy, "POLICY", "external")
         result = json.loads(
-            create_dispatch_ticket.invoke({
-                "parent_dispatch_id": "",
-                "summary": "x", "error_codes": "", "recommended_parts": "", "open_questions": "",
-            })
+            create_dispatch_ticket.invoke(
+                {
+                    "parent_dispatch_id": "",
+                    "summary": "x",
+                    "error_codes": "",
+                    "recommended_parts": "",
+                    "open_questions": "",
+                }
+            )
         )
         assert "error" in result
         assert result.get("needs_parent_dispatch_id") is True
@@ -407,10 +512,15 @@ class TestDispatch:
 
         monkeypatch.setattr(dispatch_policy, "POLICY", "external")
         result = json.loads(
-            create_dispatch_ticket.invoke({
-                "parent_dispatch_id": "D-20260505-2222",
-                "summary": "x", "error_codes": "", "recommended_parts": "", "open_questions": "",
-            })
+            create_dispatch_ticket.invoke(
+                {
+                    "parent_dispatch_id": "D-20260505-2222",
+                    "summary": "x",
+                    "error_codes": "",
+                    "recommended_parts": "",
+                    "open_questions": "",
+                }
+            )
         )
         assert result["dispatch_id"] == "D-20260505-2222-01"
 
@@ -419,8 +529,14 @@ class TestDispatchPolicy:
     def test_format_child_id(self):
         from agent import dispatch_policy
 
-        assert dispatch_policy.format_child_id("D-20260101-1234", 1) == "D-20260101-1234-01"
-        assert dispatch_policy.format_child_id("D-20260101-1234", 12) == "D-20260101-1234-12"
+        assert (
+            dispatch_policy.format_child_id("D-20260101-1234", 1)
+            == "D-20260101-1234-01"
+        )
+        assert (
+            dispatch_policy.format_child_id("D-20260101-1234", 12)
+            == "D-20260101-1234-12"
+        )
 
     def test_generate_parent_id_format(self):
         from agent import dispatch_policy
