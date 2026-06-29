@@ -47,10 +47,13 @@ function deriveSteps(
     const steps: { label: string; artifact?: string }[] = [];
     if (has('[[triage]]')) {
       const isUpdate = has('[[dispatch_briefing]]') || has('[[rse_actions]]');
-      steps.push({
-        label: isUpdate ? t('トリアージ更新 & レシピ作成') : t('トリアージのドラフト'),
-        artifact: 'triage',
-      });
+      const label =
+        persona === 'FSE'
+          ? t('原因切り分け')
+          : isUpdate
+            ? t('トリアージ更新 & レシピ作成')
+            : t('トリアージのドラフト');
+      steps.push({ label, artifact: 'triage' });
     }
     if (has('[[steps]]')) steps.push({ label: t('作業手順'), artifact: 'steps' });
     if (has('[[hearing]]')) steps.push({ label: t('ユーザー様へヒアリング'), artifact: 'hearing' });
