@@ -645,8 +645,8 @@ function StepChecklist({
             }}
             className={cn(
               `
-                rounded-md border border-border bg-primary px-4 py-1.5 body-secondary
-                text-primary-foreground
+                rounded-md bg-[var(--green-40)] px-4 py-1.5 body-secondary
+                text-black
                 hover:opacity-90
               `,
               'disabled:cursor-not-allowed disabled:opacity-50'
@@ -692,9 +692,9 @@ function QuickReplies({ choices }: { choices: string[] }) {
           onClick={() => sendMessage(choice)}
           className={cn(
             `
-              rounded-full border border-border bg-card px-4 py-2 body-secondary
+              rounded-full bg-sky-300 px-4 py-2 body-secondary text-black
               transition-colors
-              hover:bg-accent hover:text-accent-foreground
+              hover:opacity-90
             `,
             'disabled:cursor-not-allowed disabled:opacity-50'
           )}
@@ -708,9 +708,9 @@ function QuickReplies({ choices }: { choices: string[] }) {
         onClick={onOther}
         className={cn(
           `
-            rounded-full border border-dashed border-muted-foreground/60 px-4 py-2
-            body-secondary text-muted-foreground transition-colors
-            hover:bg-accent hover:text-accent-foreground
+            rounded-full border border-dashed border-sky-300 bg-sky-300/30 px-4 py-2
+            body-secondary text-foreground transition-colors
+            hover:bg-sky-300 hover:text-black
           `,
           'disabled:cursor-not-allowed disabled:opacity-50'
         )}
@@ -930,8 +930,8 @@ function DispatchBriefingCard({ briefing }: { briefing: DispatchBriefing }) {
               onClick={onRelease}
               className={cn(
                 `
-                  rounded-md border border-border bg-primary px-4 py-2 body-secondary
-                  text-primary-foreground
+                  rounded-md bg-[var(--green-40)] px-4 py-2 body-secondary
+                  text-black
                   hover:opacity-90
                 `,
                 'disabled:cursor-not-allowed disabled:opacity-50'
@@ -1066,8 +1066,8 @@ function EditableActionTable({ rows: initialRows }: { rows: StepRow[] }) {
               disabled={isAgentRunning}
               className={cn(
                 `
-                  rounded-md border border-border bg-primary px-4 py-1.5 body-secondary
-                  text-primary-foreground
+                  rounded-md bg-[var(--green-40)] px-4 py-1.5 body-secondary
+                  text-black
                   hover:opacity-90
                 `,
                 'disabled:cursor-not-allowed disabled:opacity-50'
@@ -1152,8 +1152,8 @@ function HandoffDraftCard({ handoff }: { handoff: HandoffDraft }) {
             onClick={onIssue}
             className={cn(
               `
-                rounded-md border border-border bg-primary px-4 py-2 body-secondary
-                text-primary-foreground transition-colors
+                rounded-md bg-[var(--green-40)] px-4 py-2 body-secondary
+                text-black transition-colors
                 hover:opacity-90
               `,
               'disabled:cursor-not-allowed disabled:opacity-50'
@@ -1222,9 +1222,9 @@ function ReportCard({ report, dispatchId }: { report: string; dispatchId?: strin
             type="button"
             onClick={() => setEditing(e => !e)}
             className={`
-              rounded-md border border-border bg-card px-3 py-1.5 body-secondary
+              rounded-md bg-[var(--green-40)] px-3 py-1.5 body-secondary text-black
               transition-colors
-              hover:bg-accent hover:text-accent-foreground
+              hover:opacity-90
             `}
           >
             {editing ? t('プレビュー') : t('編集')}
@@ -1233,9 +1233,9 @@ function ReportCard({ report, dispatchId }: { report: string; dispatchId?: strin
             type="button"
             onClick={onDownload}
             className={`
-              flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5
-              body-secondary transition-colors
-              hover:bg-accent hover:text-accent-foreground
+              flex items-center gap-1.5 rounded-md bg-[var(--green-40)] px-3 py-1.5
+              body-secondary text-black transition-colors
+              hover:opacity-90
             `}
           >
             <Download className="size-3.5" />
