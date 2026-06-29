@@ -211,6 +211,23 @@ function parseTriage(content: string): { rest: string; fields: TriageField[] | n
 interface SourceRef {
   label: string;
   content: string;
+  image?: string; // 図面・画像のURL（モーダルで表示）
+}
+
+// 既知の参照アセット（ラベルのキーワード → 公開URL）。モックでは構成図SVGを配信。
+const SOURCE_ASSETS: { keyword: RegExp; url: string }[] = [
+  { keyword: /構成図|component_diagram|図面/, url: '/reference/component_diagram.svg' },
+];
+
+function resolveSourceImage(label: string, content: string): string | undefined {
+  // 本文に「画像:」「image:」でURLが明示されていればそれを使う
+  const m = content.match(/^\s*(?:画像|image)\s*[:：]\s*(\S+)\s*$/im);
+  if (m) return m[1];
+  // ラベルから既知アセットを推定
+  for (const a of SOURCE_ASSETS) {
+    if (a.keyword.test(label)) return a.url;
+  }
+  return undefined;
 }
 
 // [[sources]] を「### ラベル」見出し＋本文のブロックとして解析する。
@@ -226,11 +243,12 @@ function parseSources(content: string): { rest: string; sources: SourceRef[] | n
     const trimmed = part.trim();
     if (!trimmed) continue;
     const nl = trimmed.indexOf('\n');
-    if (nl < 0) {
-      sources.push({ label: trimmed, content: '' });
-    } else {
-      sources.push({ label: trimmed.slice(0, nl).trim(), content: trimmed.slice(nl + 1).trim() });
-    }
+    const label = nl < 0 ? trimmed : trimmed.slice(0, nl).trim();
+    let body2 = nl < 0 ? '' : trimmed.slice(nl + 1).trim();
+    const image = resolveSourceImage(label, body2);
+    // 「画像:」行は本文表示から除く
+    body2 = body2.replace(/^\s*(?:画像|image)\s*[:：]\s*\S+\s*$/im, '').trim();
+    sources.push({ label, content: body2, image });
   }
   return {
     rest: content.replace(SOURCES_REGEX, '').trimEnd(),
@@ -723,30 +741,43 @@ function SourcesCard({ sources }: { sources: SourceRef[] }) {
         {t('参照情報源')}
       </div>
       <ul className="flex flex-col gap-1 p-3">
-        {sources.map((s, i) => (
-          <li key={i} className="flex items-start gap-1.5">
-            <span className="mt-1.5 size-1 shrink-0 rounded-full bg-muted-foreground" />
-            <button
-              type="button"
-              onClick={() => setOpenIndex(i)}
-              className={cn(
-                'text-left body-secondary text-[var(--green-40)] underline-offset-2 hover:underline',
-                !s.content && 'pointer-events-none text-foreground no-underline'
-              )}
-            >
-              {s.label}
-            </button>
-          </li>
-        ))}
+        {sources.map((s, i) => {
+          const hasDetail = !!s.content || !!s.image;
+          return (
+            <li key={i} className="flex items-start gap-1.5">
+              <span className="mt-1.5 size-1 shrink-0 rounded-full bg-muted-foreground" />
+              <button
+                type="button"
+                onClick={() => setOpenIndex(i)}
+                className={cn(
+                  'text-left body-secondary text-[var(--green-40)] underline-offset-2 hover:underline',
+                  !hasDetail && 'pointer-events-none text-foreground no-underline'
+                )}
+              >
+                {s.label}
+                {s.image && <span className="ml-1 text-muted-foreground">🖼</span>}
+              </button>
+            </li>
+          );
+        })}
       </ul>
       <Dialog open={openIndex !== null} onOpenChange={open => !open && setOpenIndex(null)}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>{active?.label}</DialogTitle>
           </DialogHeader>
-          <div className="body-secondary text-foreground!">
-            <Markdown>{active?.content ?? ''}</Markdown>
-          </div>
+          {active?.content && (
+            <div className="body-secondary text-foreground!">
+              <Markdown>{active.content}</Markdown>
+            </div>
+          )}
+          {active?.image && (
+            <img
+              src={active.image}
+              alt={active.label}
+              className="mt-2 w-full rounded-md border border-border bg-white"
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>

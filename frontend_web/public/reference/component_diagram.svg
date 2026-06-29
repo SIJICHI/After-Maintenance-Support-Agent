@@ -1,0 +1,60 @@
+<svg width="680" height="340" viewBox="0 0 680 340" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>EVS-X1000 内視鏡システム構成の簡易模式図（サンプル）</title>
+<desc>内視鏡システムEVS-X1000の主要部位（ビデオプロセッサー、光源装置、内視鏡スコープ、操作部、モニター、周辺機器）の配置を示す簡易模式図。実際のCAD図面の代替として作成したサンプル。</desc>
+<defs>
+<marker id="arrow5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+<path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+</defs>
+
+<rect width="680" height="340" fill="#FFFFFF"/>
+
+<text x="40" y="20" font-family="sans-serif" font-size="12" fill="#5F5E5A">スコープ挿入（体内）</text>
+<line x1="75" y1="24" x2="75" y2="38" stroke="#5F5E5A" stroke-width="1" marker-end="url(#arrow5)"/>
+
+<text x="560" y="20" font-family="sans-serif" font-size="12" fill="#5F5E5A">観察画像出力</text>
+<line x1="605" y1="38" x2="605" y2="24" stroke="#5F5E5A" stroke-width="1" marker-end="url(#arrow5)"/>
+
+<rect x="40" y="40" width="600" height="280" rx="16" fill="#FAFAF7" stroke="#888780" stroke-width="0.5" stroke-dasharray="5 4"/>
+<text x="60" y="64" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">EVS-X1000 本体構成（模式図・サンプル）</text>
+
+<!-- Row1 -->
+<g>
+<rect x="60" y="80" width="172" height="100" rx="10" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+<text x="146" y="116" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="500" fill="#04342C">内視鏡スコープ</text>
+<text x="146" y="134" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#085041">（挿入部・先端部）</text>
+<text x="146" y="150" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#085041">体内観察・処置具挿入</text>
+</g>
+
+<g>
+<rect x="254" y="80" width="172" height="100" rx="10" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+<text x="340" y="124" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="500" fill="#04342C">操作部</text>
+<text x="340" y="142" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#085041">アングルノブ・送気送水</text>
+</g>
+
+<g>
+<rect x="448" y="80" width="172" height="100" rx="10" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+<text x="534" y="124" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="500" fill="#04342C">光源装置</text>
+<text x="534" y="142" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#085041">LED光源</text>
+</g>
+
+<!-- Row2 -->
+<g>
+<rect x="60" y="200" width="172" height="100" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text x="146" y="244" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="500" fill="#26215C">ビデオプロセッサー</text>
+<text x="146" y="262" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#3C3489">画像処理・システム制御</text>
+</g>
+
+<g>
+<rect x="254" y="200" width="172" height="100" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text x="340" y="244" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="500" fill="#26215C">モニター</text>
+<text x="340" y="262" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#3C3489">観察画像の表示</text>
+</g>
+
+<g>
+<rect x="448" y="200" width="172" height="100" rx="10" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text x="534" y="244" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">周辺機器</text>
+<text x="534" y="262" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#5F5E5A">レコーダー・フットスイッチ等</text>
+</g>
+
+</svg>
