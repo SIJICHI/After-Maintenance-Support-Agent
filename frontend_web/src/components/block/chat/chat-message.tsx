@@ -564,8 +564,8 @@ function StepChecklist({
   const { t } = useTranslation();
   const ctx = useChatContext();
   const storageKey = useMemo(
-    () => `${hashKey(steps.map(s => s.item).join('|'))}-${storageNs}`,
-    [steps, storageNs]
+    () => `${ctx.chatId}-${hashKey(steps.map(s => s.item).join('|'))}-${storageNs}`,
+    [ctx.chatId, steps, storageNs]
   );
   const [rows, setRows] = useState<HearingRow[]>(() => {
     if (typeof window !== 'undefined') {
@@ -852,9 +852,10 @@ function SourcesCard({ sources }: { sources: SourceRef[] }) {
 
 function TriageCard({ fields }: { fields: TriageField[] }) {
   const { t } = useTranslation();
+  const { chatId } = useChatContext();
   const storageKey = useMemo(
-    () => `${hashKey(fields.map(f => f.label).join('|'))}-triage`,
-    [fields]
+    () => `${chatId}-${hashKey(fields.map(f => f.label).join('|'))}-triage`,
+    [chatId, fields]
   );
   const [values, setValues] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
@@ -1238,8 +1239,9 @@ function HandoffDraftCard({ handoff }: { handoff: HandoffDraft }) {
 // Wordダウンロードは常に編集後の内容を使う（基本思想: 出力はドラフト、確定は人間）。
 function ReportCard({ report, dispatchId }: { report: string; dispatchId?: string }) {
   const { t } = useTranslation();
+  const { chatId } = useChatContext();
   const previewRef = useRef<HTMLDivElement>(null);
-  const storageKey = useMemo(() => `${hashKey(report)}-report`, [report]);
+  const storageKey = useMemo(() => `${chatId}-${hashKey(report)}-report`, [chatId, report]);
   const [draft, setDraft] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       try {
