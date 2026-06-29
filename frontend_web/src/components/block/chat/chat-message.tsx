@@ -486,20 +486,20 @@ function StepChecklist({
       <div
         className={`
           flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2
-          caption-01 text-muted-foreground
+          caption-01 text-green-400
         `}
       >
         <CheckCircle2 className="size-4" />
-        {title ?? t('Work checklist')} ({doneCount}/{rows.length})
+        {title ?? t('作業チェックリスト')} ({doneCount}/{rows.length})
       </div>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse body-secondary text-foreground!">
           <thead>
             <tr className="border-b border-border bg-muted/20 text-left">
               <th className="w-10 px-2 py-2 text-center">✓</th>
-              <th className="w-48 px-3 py-2">{itemHeader ?? t('Step')}</th>
-              <th className="px-3 py-2">{detailsHeader ?? t('Details')}</th>
-              <th className="px-3 py-2">{notesHeader ?? t('Notes')}</th>
+              <th className="w-48 px-3 py-2">{itemHeader ?? t('作業項目')}</th>
+              <th className="px-3 py-2">{detailsHeader ?? t('詳細')}</th>
+              <th className="px-3 py-2">{notesHeader ?? t('注意事項')}</th>
               <th className="w-8 px-1 py-2"></th>
             </tr>
           </thead>
@@ -518,7 +518,7 @@ function StepChecklist({
                   <textarea
                     value={row.item}
                     rows={1}
-                    placeholder={itemHeader ?? t('Step')}
+                    placeholder={itemHeader ?? t('作業項目')}
                     onChange={e => updateRow(i, { item: e.target.value })}
                     className={cn(inputCls, 'font-medium', row.checked && 'line-through')}
                   />
@@ -527,7 +527,7 @@ function StepChecklist({
                   <textarea
                     value={row.details.join('\n')}
                     rows={Math.max(2, row.details.length)}
-                    placeholder={t('Details (one per line)')}
+                    placeholder={t('詳細（1行に1項目）')}
                     onChange={e =>
                       updateRow(i, {
                         details: e.target.value.split('\n').map(s => s.trim()).filter(Boolean),
@@ -540,7 +540,7 @@ function StepChecklist({
                   <textarea
                     value={row.memo}
                     rows={2}
-                    placeholder={t('Notes (one per line, prefix ! for safety)')}
+                    placeholder={t('注意事項（1行に1項目、安全は先頭に!）')}
                     onChange={e => updateRow(i, { memo: e.target.value })}
                     className={inputCls}
                   />
@@ -550,7 +550,7 @@ function StepChecklist({
                     type="button"
                     onClick={() => removeRow(i)}
                     className="rounded p-1 text-muted-foreground hover:text-destructive"
-                    title={t('Remove row')}
+                    title={t('行を削除')}
                   >
                     ✕
                   </button>
@@ -570,7 +570,7 @@ function StepChecklist({
             hover:bg-accent hover:text-accent-foreground
           `}
         >
-          {t('+ Add row')}
+          {t('+ 行を追加')}
         </button>
         {submit && (
           <button
@@ -706,7 +706,7 @@ function TriageCard({ fields }: { fields: TriageField[] }) {
         `}
       >
         <FileText className="size-4" />
-        {t('Current estimated cause & similar trends')}
+        {t('現時点の推定原因・類似傾向')}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse body-secondary text-foreground!">
@@ -756,13 +756,13 @@ function DispatchBriefingCard({ briefing }: { briefing: DispatchBriefing }) {
   };
 
   const rows: { key: keyof DispatchBriefing; label: string; multiline: boolean }[] = [
-    { key: 'dispatch_id', label: t('Dispatch No.'), multiline: false },
-    { key: 'symptom', label: t('Reported symptom'), multiline: true },
-    { key: 'diagnosis', label: t('Estimated cause / findings'), multiline: true },
-    { key: 'initial_response', label: t('Initial response done'), multiline: true },
-    { key: 'parts_to_bring', label: t('Parts to bring (; separated)'), multiline: true },
-    { key: 'focus_points', label: t('Focus points for FSE (; separated)'), multiline: true },
-    { key: 'notes', label: t('Notes'), multiline: true },
+    { key: 'dispatch_id', label: t('ディスパッチ番号'), multiline: false },
+    { key: 'symptom', label: t('申告症状'), multiline: true },
+    { key: 'diagnosis', label: t('推定原因・所見'), multiline: true },
+    { key: 'initial_response', label: t('実施済みの初動対応'), multiline: true },
+    { key: 'parts_to_bring', label: t('持参・準備部品（;区切り）'), multiline: true },
+    { key: 'focus_points', label: t('FSEへの重点指示（;区切り）'), multiline: true },
+    { key: 'notes', label: t('申し送り'), multiline: true },
   ];
 
   const inputCls =
@@ -777,12 +777,12 @@ function DispatchBriefingCard({ briefing }: { briefing: DispatchBriefing }) {
         `}
       >
         <FileText className="size-4" />
-        {t('FSE dispatch briefing (review & edit before releasing)')}
+        {t('FSE派遣ブリーフィング（リリース前に確認・編集）')}
       </div>
       <div className="flex flex-col gap-3 p-3">
         {rows.map(({ key, label, multiline }) => (
           <label key={key} className="flex flex-col gap-1">
-            <span className="caption-01 text-muted-foreground">{label}</span>
+            <span className="caption-01 text-green-400">{label}</span>
             {multiline ? (
               <textarea
                 value={fields[key]}
@@ -817,11 +817,11 @@ function DispatchBriefingCard({ briefing }: { briefing: DispatchBriefing }) {
                 'disabled:cursor-not-allowed disabled:opacity-50'
               )}
             >
-              {t('Release dispatch briefing to FSE')}
+              {t('FSEに派遣情報をリリース')}
             </button>
           </div>
         ) : (
-          <div className="caption-01 text-muted-foreground">{t('Released to FSE.')}</div>
+          <div className="caption-01 text-green-400">{t('FSEへリリース済み')}</div>
         )}
       </div>
     </div>
@@ -881,7 +881,7 @@ function EditableActionTable({ rows: initialRows }: { rows: StepRow[] }) {
         `}
       >
         <CheckCircle2 className="size-4" />
-        {t('Next actions for FSE (edit & release)')}
+        {t('FSEへのネクストアクション（編集・リリース）')}
       </div>
       <div className="flex flex-col gap-3 p-3">
         {rows.map((row, i) => (
@@ -892,14 +892,14 @@ function EditableActionTable({ rows: initialRows }: { rows: StepRow[] }) {
                   type="text"
                   value={row.item}
                   disabled={released || isAgentRunning}
-                  placeholder={t('Step')}
+                  placeholder={t('作業項目')}
                   onChange={e => setItem(i, e.target.value)}
                   className={cn(inputCls, 'font-medium')}
                 />
                 <textarea
                   value={row.details.join('\n')}
                   disabled={released || isAgentRunning}
-                  placeholder={t('Details (one per line)')}
+                  placeholder={t('詳細（1行に1項目）')}
                   rows={Math.max(2, row.details.length)}
                   onChange={e => setDetails(i, e.target.value)}
                   className={inputCls}
@@ -907,7 +907,7 @@ function EditableActionTable({ rows: initialRows }: { rows: StepRow[] }) {
                 <textarea
                   value={row.notes.split(/[;；]/).filter(Boolean).join('\n')}
                   disabled={released || isAgentRunning}
-                  placeholder={t('Notes (one per line, prefix ! for safety)')}
+                  placeholder={t('注意事項（1行に1項目、安全は先頭に!）')}
                   rows={1}
                   onChange={e => setNotes(i, e.target.value)}
                   className={inputCls}
@@ -918,7 +918,7 @@ function EditableActionTable({ rows: initialRows }: { rows: StepRow[] }) {
                   type="button"
                   onClick={() => removeRow(i)}
                   className="mt-1 shrink-0 rounded p-1 text-muted-foreground hover:text-destructive"
-                  title={t('Remove row')}
+                  title={t('行を削除')}
                 >
                   ✕
                 </button>
@@ -938,7 +938,7 @@ function EditableActionTable({ rows: initialRows }: { rows: StepRow[] }) {
                 hover:bg-accent hover:text-accent-foreground
               `}
             >
-              {t('+ Add row')}
+              {t('+ 行を追加')}
             </button>
             <button
               type="button"
@@ -953,12 +953,12 @@ function EditableActionTable({ rows: initialRows }: { rows: StepRow[] }) {
                 'disabled:cursor-not-allowed disabled:opacity-50'
               )}
             >
-              {t('Release to FSE')}
+              {t('FSEにリリース')}
             </button>
           </div>
         )}
         {released && (
-          <div className="caption-01 text-muted-foreground">{t('Released to FSE.')}</div>
+          <div className="caption-01 text-green-400">{t('FSEへリリース済み')}</div>
         )}
       </div>
     </div>
@@ -989,11 +989,11 @@ function HandoffDraftCard({ handoff }: { handoff: HandoffDraft }) {
   };
 
   const rows: { key: keyof HandoffDraft; label: string }[] = [
-    { key: 'parent_dispatch_id', label: t('Case dispatch No. (parent)') },
-    { key: 'summary', label: t('Summary') },
-    { key: 'error_codes', label: t('Error codes') },
-    { key: 'recommended_parts', label: t('Recommended parts') },
-    { key: 'open_questions', label: t('Open questions') },
+    { key: 'parent_dispatch_id', label: t('案件ディスパッチ番号（親）') },
+    { key: 'summary', label: t('要約') },
+    { key: 'error_codes', label: t('関連エラーコード') },
+    { key: 'recommended_parts', label: t('推奨部品') },
+    { key: 'open_questions', label: t('未解決の確認事項') },
   ];
 
   return (
@@ -1005,12 +1005,12 @@ function HandoffDraftCard({ handoff }: { handoff: HandoffDraft }) {
         `}
       >
         <FileText className="size-4" />
-        {t('HQ handoff summary (review & edit before issuing)')}
+        {t('HQ引き継ぎ要約（発行前に確認・編集）')}
       </div>
       <div className="flex flex-col gap-3 p-3">
         {rows.map(({ key, label }) => (
           <label key={key} className="flex flex-col gap-1">
-            <span className="caption-01 text-muted-foreground">{label}</span>
+            <span className="caption-01 text-green-400">{label}</span>
             <textarea
               value={fields[key]}
               disabled={issued || isAgentRunning}
@@ -1039,7 +1039,7 @@ function HandoffDraftCard({ handoff }: { handoff: HandoffDraft }) {
               'disabled:cursor-not-allowed disabled:opacity-50'
             )}
           >
-            {issued ? t('Issuing…') : t('Issue dispatch ticket with this content')}
+            {issued ? t('発行中…') : t('この内容で相談票を発行')}
           </button>
         </div>
       </div>
@@ -1090,12 +1090,12 @@ function ReportCard({ report, dispatchId }: { report: string; dispatchId?: strin
       <div
         className={`
           flex items-center justify-between gap-2 border-b border-border bg-muted/30
-          px-3 py-2 caption-01 text-muted-foreground
+          px-3 py-2 caption-01 text-green-400
         `}
       >
         <span className="flex items-center gap-2">
           <FileText className="size-4" />
-          {t('Service report draft')}
+          {t('サービス報告書ドラフト')}
         </span>
         <span className="flex items-center gap-2">
           <button
@@ -1107,7 +1107,7 @@ function ReportCard({ report, dispatchId }: { report: string; dispatchId?: strin
               hover:bg-accent hover:text-accent-foreground
             `}
           >
-            {editing ? t('Preview') : t('Edit')}
+            {editing ? t('プレビュー') : t('編集')}
           </button>
           <button
             type="button"
@@ -1119,7 +1119,7 @@ function ReportCard({ report, dispatchId }: { report: string; dispatchId?: strin
             `}
           >
             <Download className="size-3.5" />
-            {t('Download as Word')}
+            {t('Wordでダウンロード')}
           </button>
         </span>
       </div>
@@ -1180,13 +1180,13 @@ export function TextContentPart({ content }: { content: string }) {
         <div data-artifact="hearing">
           <StepChecklist
             steps={hearing}
-            title={t('Hearing checklist (confirm with customer)')}
-            itemHeader={t('Item to confirm')}
-            detailsHeader={t('Points')}
-            notesHeader={t('Memo')}
+            title={t('ヒアリング項目（お客様へ確認）')}
+            itemHeader={t('確認項目')}
+            detailsHeader={t('確認の観点')}
+            notesHeader={t('メモ')}
             storageNs="hearing"
             submit={{
-              label: t('Update triage & recipe with these results'),
+              label: t('この結果でトリアージ・レシピを更新'),
               prefix:
                 '以下のヒアリング結果です。これを踏まえてトリアージを更新し、FSEへ送るレシピ（派遣ブリーフィング）をドラフトしてください。対象のディスパッチ番号が分かる場合は save_hearing_results で記録してください。',
             }}
@@ -1304,7 +1304,7 @@ function ToolInvocationCard({
           )}
         />
         <Wrench className="size-4 text-muted-foreground" />
-        <span className="body-secondary">{t('Tool Call')}</span>
+        <span className="body-secondary">{t('ツール呼び出し')}</span>
         <Badge variant="default" className="code">
           {toolName}
         </Badge>
@@ -1332,7 +1332,7 @@ function ToolInvocationCard({
             >
               <div className="flex items-center gap-1.5 bg-muted/20 caption-01 px-3 py-1.5">
                 <ChevronRight className="size-3" />
-                {t('Arguments')}
+                {t('引数')}
               </div>
               <CodeBlock code={JSON.stringify(args, null, '  ')} />
             </div>
@@ -1343,7 +1343,7 @@ function ToolInvocationCard({
             <div>
               <div className="flex items-center gap-1.5 bg-muted/20 caption-01 px-3 py-1.5">
                 <ChevronRight className="size-3" />
-                {t('Result')}
+                {t('結果')}
               </div>
               <CodeBlock code={result} />
             </div>
@@ -1423,7 +1423,7 @@ function ChatMessageContent({
 export function ChatMessage(props: ChatMessageEvent) {
   const { t } = useTranslation();
   return (
-    <ChatMessageErrorBoundary message={props} title={t('Failed to render message')}>
+    <ChatMessageErrorBoundary message={props} title={t('メッセージの表示に失敗しました')}>
       <ChatMessageContent {...props} />
     </ChatMessageErrorBoundary>
   );

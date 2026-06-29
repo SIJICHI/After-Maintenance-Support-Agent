@@ -30,11 +30,11 @@ function deriveSteps(
 
   if (msg.role === 'user') {
     if (EMPLOYEE_ID_RE.test(text)) return [];
-    if (text.startsWith('以下のヒアリング結果です')) return [{ label: t('Hearing submitted') }];
+    if (text.startsWith('以下のヒアリング結果です')) return [{ label: t('ヒアリング結果送信') }];
     if (text.startsWith('以下の派遣ブリーフィングをFSEにリリース')) return [];
     if (text.startsWith('以下の内容でディスパッチ票を発行')) return [];
     if (text.startsWith('以下のネクストアクションをFSEにリリース')) return [];
-    return [{ label: isFirstUserPrompt ? t('Case input') : t('RSE input') }];
+    return [{ label: isFirstUserPrompt ? t('事案入力') : t('RSE入力') }];
   }
 
   if (msg.role === 'assistant') {
@@ -43,24 +43,24 @@ function deriveSteps(
     if (has('[[triage]]')) {
       const isUpdate = has('[[dispatch_briefing]]') || has('[[rse_actions]]');
       steps.push({
-        label: isUpdate ? t('Triage update & recipe') : t('Triage draft'),
+        label: isUpdate ? t('トリアージ更新 & レシピ作成') : t('トリアージのドラフト'),
         artifact: 'triage',
       });
     }
-    if (has('[[steps]]')) steps.push({ label: t('Work steps'), artifact: 'steps' });
-    if (has('[[hearing]]')) steps.push({ label: t('Hearing with customer'), artifact: 'hearing' });
+    if (has('[[steps]]')) steps.push({ label: t('作業手順'), artifact: 'steps' });
+    if (has('[[hearing]]')) steps.push({ label: t('ユーザー様へヒアリング'), artifact: 'hearing' });
     if (has('[[rse_actions]]'))
-      steps.push({ label: t('Next actions draft'), artifact: 'rse-actions' });
+      steps.push({ label: t('ネクストアクション ドラフト'), artifact: 'rse-actions' });
     if (has('[[dispatch_briefing]]'))
-      steps.push({ label: t('FSE briefing review/edit'), artifact: 'briefing' });
+      steps.push({ label: t('FSEブリーフィングのレビュー/編集'), artifact: 'briefing' });
     if (has('[[handoff_draft]]'))
-      steps.push({ label: t('Handoff summary'), artifact: 'handoff' });
-    if (has('[[report]]')) steps.push({ label: t('Report draft'), artifact: 'report' });
+      steps.push({ label: t('引き継ぎ要約'), artifact: 'handoff' });
+    if (has('[[report]]')) steps.push({ label: t('報告書ドラフト'), artifact: 'report' });
     if (steps.length === 0) {
       if (text.includes('リリースしました') && text.includes('ブリーフィング'))
-        steps.push({ label: t('FSE briefing released') });
+        steps.push({ label: t('FSEブリーフィングのリリース') });
       else if (text.includes('リリースしました') && text.includes('ネクストアクション'))
-        steps.push({ label: t('Next actions released') });
+        steps.push({ label: t('ネクストアクションのリリース') });
     }
     return steps;
   }
@@ -114,7 +114,7 @@ export function ProcessMap({
 
   return (
     <div className="flex w-56 shrink-0 flex-col overflow-y-auto p-2">
-      <div className="mb-2 px-1 caption-01 text-muted-foreground">{t('Process map')}</div>
+      <div className="mb-2 px-1 caption-01 text-green-400">{t('プロセスマップ')}</div>
       <ol className="flex flex-col gap-1">
         {steps.map((s, i) => (
           <li key={`${s.id}-${s.artifact ?? 'msg'}-${i}`}>
@@ -124,7 +124,7 @@ export function ProcessMap({
               className={cn(
                 `
                   w-full rounded-md border border-border bg-card px-3 py-2 text-left
-                  body-secondary transition-colors
+                  body-secondary text-green-400 transition-colors
                   hover:bg-accent hover:text-accent-foreground
                 `
               )}

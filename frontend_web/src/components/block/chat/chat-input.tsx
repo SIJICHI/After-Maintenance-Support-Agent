@@ -52,7 +52,7 @@ export function ChatTextInput({
       <Textarea
         ref={ref}
         data-chat-input="true"
-        placeholder={t('Type a message… (choose "Other" to describe a situation not listed)')}
+        placeholder={t('メッセージを入力…（一覧にない場合は「その他」を選んで記述）')}
         value={userInput}
         onChange={e => setUserInput(e.target.value)}
         onCompositionStart={() => setIsComposing(true)}
@@ -69,7 +69,7 @@ export function ChatTextInput({
               </Button>
             </span>
           </TooltipTrigger>
-          <TooltipContent>{t('Agent is running')}</TooltipContent>
+          <TooltipContent>{t('エージェント実行中')}</TooltipContent>
         </Tooltip>
       ) : (
         <Button
