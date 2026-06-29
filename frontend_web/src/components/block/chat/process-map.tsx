@@ -93,7 +93,7 @@ export function ProcessMap({
   }
 
   return (
-    <div className="hidden w-56 shrink-0 flex-col overflow-y-auto p-2 md:flex">
+    <div className="flex w-56 shrink-0 flex-col overflow-y-auto p-2">
       <div className="mb-2 px-1 caption-01 text-muted-foreground">{t('Process map')}</div>
       <ol className="flex flex-col gap-1">
         {steps.map((s, i) => (
