@@ -34,6 +34,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+// 構成図SVGはViteアセットとしてimportし、dev/デプロイ(ベースパス配下)双方で正しいURLを得る。
+import componentDiagramUrl from '@/assets/component_diagram.svg?url';
 
 interface ChatMessageErrorBoundaryProps {
   children: ReactNode;
@@ -214,23 +216,26 @@ interface SourceRef {
   image?: string; // 図面・画像のURL（モーダルで表示）
 }
 
-// 既知の参照アセット（ラベルのキーワード → 公開アセットの相対パス）。モックでは構成図SVGを配信。
+// 既知の参照アセット（ファイル名 → Viteが解決した実URL）。エージェントがFSパスや
+// 任意ディレクトリのパスを返しても、ファイル名で正しい配信URLにマップする。
+const KNOWN_ASSET_URLS: Record<string, string> = {
+  'component_diagram.svg': componentDiagramUrl,
+};
+
+// ラベルのキーワード → 既知アセットURL（本文に画像パスが無くてもラベルから推定）。
 const SOURCE_ASSETS: { keyword: RegExp; url: string }[] = [
-  { keyword: /構成図|component_diagram|図面/, url: 'reference/component_diagram.svg' },
+  { keyword: /構成図|component_diagram|図面/, url: componentDiagramUrl },
 ];
 
-// 公開アセットのファイル名（エージェントがサーバーのファイルシステム絶対パスを返しても、
-// ファイル名で public/reference 配下の配信URLにマップする）。
-const KNOWN_ASSET_FILES = new Set(['component_diagram.svg']);
-
-// アプリはベースパス配下で配信されることがあるため、相対/絶対パスを BASE_URL で解決する。
+// 画像パスを表示用URLに解決する。既知アセットはファイル名でViteの実URLに差し替える。
 function resolveAssetUrl(path: string): string {
+  const file = path.split(/[\\/?#]/).filter(Boolean).pop() || path;
+  if (KNOWN_ASSET_URLS[file]) return KNOWN_ASSET_URLS[file];
+  if (/^(https?:)?\/\//.test(path) || path.startsWith('data:') || path.startsWith('/')) {
+    return path;
+  }
   const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
-  const file = path.split(/[\\/]/).pop() || path;
-  // 既知アセットはファイル名で公開URLに解決（FSパス・任意ディレクトリでも表示可能に）
-  if (KNOWN_ASSET_FILES.has(file)) return `${base}/reference/${file}`;
-  if (/^(https?:)?\/\//.test(path) || path.startsWith('data:')) return path;
-  return `${base}/${path.replace(/^\//, '')}`;
+  return `${base}/${path}`;
 }
 
 function resolveSourceImage(label: string, content: string): string | undefined {
