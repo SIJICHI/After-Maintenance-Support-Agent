@@ -47,6 +47,10 @@ export function selectMessages(res: { data: APIChatWithMessages }): MessageRespo
 
     const parts = mapMessageToContentPart(historyMessage);
     const content = historyMessage.content ?? '';
+    // 描画すべき中身が無い空メッセージはバブルごと出さない。
+    if (parts.length === 0 && !content) {
+      continue;
+    }
     const uiMessage: MessageResponse = {
       id: historyMessage.id,
       role: mapMessageToRole(historyMessage.role),
@@ -84,26 +88,34 @@ function tryParseArgs(args: string) {
 
 function mapMessageToContentPart(m: MessageHistoryResponse): ContentPart[] {
   if (m.toolCalls?.length) {
-    return m.toolCalls.map(
-      t =>
-        ({
-          type: 'tool-invocation',
-          toolInvocation: {
-            state: 'call',
-            toolCallId: t.id,
-            toolName: t.function?.name,
-            args: tryParseArgs(t.function?.arguments),
-          },
-        }) as ToolInvocationUIPart
-    );
+    // name の無い壊れた/部分的なツールコール片（ストリーミング途絶等）は描画しない。
+    return m.toolCalls
+      .filter(t => t.function?.name)
+      .map(
+        t =>
+          ({
+            type: 'tool-invocation',
+            toolInvocation: {
+              state: 'call',
+              toolCallId: t.id,
+              toolName: t.function?.name,
+              args: tryParseArgs(t.function?.arguments),
+            },
+          }) as ToolInvocationUIPart
+      );
   }
 
   if (m.content) {
     return [{ type: 'text', text: m.content }];
   }
 
-  // TODO
-  return [{ type: 'text', text: 'Unsupported content type' }];
+  if (m.error) {
+    return [{ type: 'text', text: m.error }];
+  }
+
+  // content/toolCalls/error のいずれも無い空メッセージ（reasoningのみ等）は描画しない。
+  // 以前は "Unsupported content type" を出していたが、誤解を招くため空(=非表示)にする。
+  return [];
 }
 
 /**
