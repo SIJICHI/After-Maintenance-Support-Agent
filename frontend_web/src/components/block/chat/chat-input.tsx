@@ -58,7 +58,7 @@ export function ChatTextInput({
         onCompositionStart={() => setIsComposing(true)}
         onCompositionEnd={() => setIsComposing(false)}
         onKeyDown={keyDownHandler}
-        className="h-auto min-h-20 flex-1 shrink-0 resize-none overflow-x-hidden overflow-y-auto pr-12"
+        className="h-auto min-h-12 flex-1 shrink-0 resize-none overflow-x-hidden overflow-y-auto rounded-[7px] border-border bg-card pr-12 text-[12.5px]"
       ></Textarea>
       {runningAgent ? (
         <Tooltip>
@@ -75,7 +75,7 @@ export function ChatTextInput({
         <Button
           type="submit"
           onClick={() => onSubmit(userInput)}
-          className="absolute right-2 bottom-2"
+          className="absolute right-2 bottom-2 bg-[var(--green-50)] text-black hover:opacity-90"
           size="icon"
           testId="send-message-btn"
           disabled={!userInput.trim().length}

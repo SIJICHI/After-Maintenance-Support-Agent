@@ -149,28 +149,30 @@ export function ProcessMap({
   }
 
   return (
-    <div className="flex w-56 shrink-0 flex-col overflow-y-auto p-2">
-      <div className="mb-2 px-1 caption-01 text-[var(--green-40)]">{t('プロセスマップ')}</div>
-      <ol className="flex flex-col gap-1">
+    <aside className="flex w-[184px] shrink-0 flex-col gap-3 overflow-y-auto border-r border-border p-4">
+      <div className="text-[10px] tracking-[0.1em] text-[var(--green-40)] uppercase">
+        {t('プロセスマップ')}
+      </div>
+      <ol className="flex flex-col gap-[7px]">
         {steps.map((s, i) => (
           <li key={`${s.id}-${s.artifact ?? 'msg'}-${i}`}>
             <button
               type="button"
               onClick={() => onJump(s)}
-              className={cn(
-                `
-                  w-full rounded-md border border-border bg-card px-3 py-2 text-left
-                  body-secondary text-[var(--green-40)] transition-colors
-                  hover:bg-accent hover:text-accent-foreground
-                `
-              )}
+              className={`
+                flex w-full items-start gap-[9px] rounded-[7px] border border-border bg-card
+                px-[10px] py-[9px] text-left transition-colors
+                hover:bg-accent hover:text-accent-foreground
+              `}
             >
-              <span className="mr-1.5 text-muted-foreground">{i + 1}.</span>
-              {s.label}
+              <span className="mt-px font-mono text-[10.5px] text-muted-foreground">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <span className="text-[12px] leading-[1.3] text-foreground">{s.label}</span>
             </button>
           </li>
         ))}
       </ol>
-    </div>
+    </aside>
   );
 }

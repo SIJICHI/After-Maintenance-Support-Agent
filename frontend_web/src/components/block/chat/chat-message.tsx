@@ -8,17 +8,11 @@ import {
   type ErrorInfo,
 } from 'react';
 import {
-  User,
-  Bot,
-  Cog,
-  Hammer,
   Wrench,
   ChevronRight,
   CheckCircle2,
   Loader2,
   AlertTriangle,
-  Brain,
-  FileText,
   Download,
 } from 'lucide-react';
 import { CodeBlock } from '@/components/ui/code-block';
@@ -495,6 +489,42 @@ interface HearingRow {
   checked: boolean;
 }
 
+// 成果物カード共通シェル（1b Ops Console）。左1pxのステータスレール＋大文字ヘッダ。
+// rail: 'green'=情報/成果物系, 'purple'=フォーム系（派遣ブリーフィング/ネクストアクション/引き継ぎ）。
+function CardShell({
+  rail = 'green',
+  title,
+  right,
+  children,
+}: {
+  rail?: 'green' | 'purple';
+  title: string;
+  right?: ReactNode;
+  children: ReactNode;
+}) {
+  const railColor = rail === 'purple' ? 'bg-[var(--accent)]' : 'bg-[var(--green-40)]';
+  const titleColor = rail === 'purple' ? 'text-[var(--accent)]' : 'text-[var(--green-40)]';
+  return (
+    <div className="my-2 flex overflow-hidden rounded-md border border-border bg-card">
+      <span className={cn('w-px shrink-0', railColor)} aria-hidden />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+          <span
+            className={cn(
+              'text-[11px] font-semibold tracking-[0.06em] uppercase',
+              titleColor
+            )}
+          >
+            {title}
+          </span>
+          {right}
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // 注意事項セル（読取専用）。各項目はセミコロン区切り。先頭が「!」の項目は安全重要事項として
 // 警告アイコン＋黄色で強調する。
 // 【安全表示は不可侵】この安全ハイライト（!→⚠️黄色）は患者・ユーザー・作業員の安全に直結する
@@ -604,51 +634,63 @@ function StepChecklist({
   const doneCount = rows.filter(r => r.checked).length;
   const allDone = rows.length > 0 && doneCount === rows.length;
   const inputCls =
-    'w-full resize-y rounded border border-border bg-background px-2 py-1 body-secondary text-foreground! focus:border-primary focus:outline-none';
+    'w-full resize-y rounded border border-border bg-background px-2 py-1 text-[12px] text-foreground! focus:border-primary focus:outline-none';
+  const hdrCls =
+    'border-b border-foreground px-[10px] py-1.5 text-left text-[12px] font-semibold tracking-[0.04em] uppercase text-foreground';
 
   return (
-    <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
-      <div
-        className={`
-          flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2
-          caption-01 text-[var(--green-40)]
-        `}
-      >
-        <CheckCircle2 className="size-4" />
-        {title ?? t('作業チェックリスト')} ({doneCount}/{rows.length})
-      </div>
+    <CardShell
+      title={title ?? t('作業チェックリスト')}
+      right={
+        <span className="font-mono text-[9.5px] text-foreground">
+          {doneCount}/{rows.length}
+        </span>
+      }
+    >
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse body-secondary text-foreground!">
+        <table className="w-full border-collapse text-foreground!">
           <thead>
-            <tr className="border-b border-border bg-muted/20 text-left">
-              <th className="w-10 px-2 py-2 text-center">✓</th>
-              <th className="w-48 px-3 py-2">{itemHeader ?? t('作業項目')}</th>
-              <th className="px-3 py-2">{detailsHeader ?? t('詳細')}</th>
-              <th className="px-3 py-2">{notesHeader ?? t('注意事項')}</th>
-              <th className="w-8 px-1 py-2"></th>
+            <tr className="bg-muted/40">
+              <th className="w-[30px] border-b border-foreground p-1.5" />
+              <th className={cn(hdrCls, 'w-48')}>{itemHeader ?? t('作業項目')}</th>
+              <th className={hdrCls}>{detailsHeader ?? t('詳細')}</th>
+              <th className={hdrCls}>{notesHeader ?? t('注意事項')}</th>
+              <th className="w-8 border-b border-foreground p-1.5" />
             </tr>
           </thead>
           <tbody>
             {rows.map((row, i) => (
-              <tr key={i} className="border-b border-border last:border-b-0 align-top">
-                <td className="px-2 py-2 text-center">
-                  <input
-                    type="checkbox"
-                    checked={row.checked}
-                    onChange={() => updateRow(i, { checked: !row.checked })}
-                    className="mt-2 size-4 accent-primary"
-                  />
+              <tr key={i} className="align-top">
+                <td className="border-b border-border/50 px-1.5 py-2 text-center">
+                  <button
+                    type="button"
+                    onClick={() => updateRow(i, { checked: !row.checked })}
+                    className={`
+                      mt-1 inline-flex size-4 items-center justify-center rounded
+                      border-[1.5px] border-foreground bg-transparent text-[10px]
+                    `}
+                    aria-label="toggle"
+                  >
+                    {row.checked && (
+                      <span className="font-bold text-[var(--green-40)]">✓</span>
+                    )}
+                  </button>
                 </td>
-                <td className="px-3 py-2">
+                <td
+                  className={cn(
+                    'border-b border-border/50 px-[10px] py-2',
+                    row.checked && 'bg-[color-mix(in_oklch,var(--green-40)_16%,transparent)]'
+                  )}
+                >
                   <textarea
                     value={row.item}
                     rows={1}
                     placeholder={itemHeader ?? t('作業項目')}
                     onChange={e => updateRow(i, { item: e.target.value })}
-                    className={cn(inputCls, 'font-medium', row.checked && 'line-through')}
+                    className={cn(inputCls, 'font-semibold')}
                   />
                 </td>
-                <td className="px-3 py-2">
+                <td className="border-b border-border/50 px-[10px] py-2">
                   <textarea
                     value={row.details.join('\n')}
                     rows={Math.max(2, row.details.length)}
@@ -661,7 +703,7 @@ function StepChecklist({
                     className={inputCls}
                   />
                 </td>
-                <td className="px-3 py-2">
+                <td className="border-b border-border/50 px-[10px] py-2">
                   {notesMode === 'edit' ? (
                     <textarea
                       value={row.memo}
@@ -674,7 +716,7 @@ function StepChecklist({
                     <NotesCell notes={row.memo} />
                   )}
                 </td>
-                <td className="px-1 py-2 text-center">
+                <td className="border-b border-border/50 px-1 py-2 text-center">
                   <button
                     type="button"
                     onClick={() => removeRow(i)}
@@ -689,13 +731,13 @@ function StepChecklist({
           </tbody>
         </table>
       </div>
-      <div className="flex flex-wrap items-center gap-2 border-t border-border p-2">
+      <div className="flex flex-wrap items-center gap-2 border-t border-border/50 p-2">
         <button
           type="button"
           onClick={addRow}
           className={`
-            rounded-md border border-dashed border-muted-foreground/60 px-3 py-1.5
-            body-secondary text-muted-foreground
+            rounded border border-dashed border-muted-foreground/60 px-3 py-1.5 text-[11.5px]
+            text-muted-foreground
             hover:bg-accent hover:text-accent-foreground
           `}
         >
@@ -715,11 +757,7 @@ function StepChecklist({
               ctx.sendMessage(`${submit.prefix}\n${body}`);
             }}
             className={cn(
-              `
-                rounded-md bg-[var(--green-40)] px-4 py-1.5 body-secondary
-                text-black
-                hover:opacity-90
-              `,
+              'rounded bg-[var(--green-50)] px-[13px] py-1.5 text-[11.5px] font-bold text-black hover:opacity-90',
               'disabled:cursor-not-allowed disabled:opacity-50'
             )}
           >
@@ -728,18 +766,20 @@ function StepChecklist({
         )}
       </div>
       {allDone && completeChoices && completeChoices.length > 0 && (
-        <div className="border-t border-border bg-muted/20 p-3">
-          {completeQuestion && <div className="mb-2 body font-medium">{completeQuestion}</div>}
+        <div className="border-t border-border/50 bg-muted/20 p-3">
+          {completeQuestion && <div className="mb-2 text-[13px] font-semibold">{completeQuestion}</div>}
           <QuickReplies choices={completeChoices} />
         </div>
       )}
-    </div>
+    </CardShell>
   );
 }
 
 function QuickReplies({ choices }: { choices: string[] }) {
   const { sendMessage, setUserInput, isAgentRunning } = useChatContext();
   const { t } = useTranslation();
+  // 押されたチップだけをハイライト（設問=このメッセージ単位で排他）。
+  const [selected, setSelected] = useState<number | null>(null);
 
   // 「その他」: 選択肢にない内容をFSEが自由記述できるよう、入力欄にフォーカスさせる。
   const onOther = () => {
@@ -754,34 +794,39 @@ function QuickReplies({ choices }: { choices: string[] }) {
   const visibleChoices = choices.filter(c => !/^(その他|other)/i.test(c.trim()));
 
   return (
-    <div className="mt-3 flex flex-wrap gap-2">
-      {visibleChoices.map((choice, i) => (
-        <button
-          key={i}
-          type="button"
-          disabled={isAgentRunning}
-          onClick={() => sendMessage(choice)}
-          className={cn(
-            `
-              rounded-full bg-sky-300 px-4 py-2 body-secondary text-black
-              transition-colors
-              hover:opacity-90
-            `,
-            'disabled:cursor-not-allowed disabled:opacity-50'
-          )}
-        >
-          {choice}
-        </button>
-      ))}
+    <div className="mt-3 flex flex-wrap gap-[7px]">
+      {visibleChoices.map((choice, i) => {
+        const isSel = selected === i;
+        return (
+          <button
+            key={i}
+            type="button"
+            disabled={isAgentRunning}
+            onClick={() => {
+              setSelected(i);
+              sendMessage(choice);
+            }}
+            className={cn(
+              'rounded border border-[var(--azure-50)] px-3 py-1.5 text-[12px] transition-colors',
+              isSel
+                ? 'bg-[var(--azure-50)] font-bold text-black'
+                : 'bg-[color-mix(in_oklch,var(--azure-50)_10%,transparent)] text-foreground hover:bg-[color-mix(in_oklch,var(--azure-50)_22%,transparent)]',
+              'disabled:cursor-not-allowed disabled:opacity-50'
+            )}
+          >
+            {choice}
+          </button>
+        );
+      })}
       <button
         type="button"
         disabled={isAgentRunning}
         onClick={onOther}
         className={cn(
           `
-            rounded-full border border-dashed border-sky-300 bg-sky-300/30 px-4 py-2
-            body-secondary text-foreground transition-colors
-            hover:bg-sky-300 hover:text-black
+            rounded border border-dashed border-muted-foreground px-3 py-1.5 text-[12px]
+            text-muted-foreground transition-colors
+            hover:bg-accent hover:text-accent-foreground
           `,
           'disabled:cursor-not-allowed disabled:opacity-50'
         )}
@@ -795,43 +840,55 @@ function QuickReplies({ choices }: { choices: string[] }) {
 // トリアージ表（現時点の推定原因・類似傾向）の編集カード。区分ごとの内容を編集できる。
 // 参照情報源カード。箇条書きで一覧表示し、各リンクのクリックで中身を別モーダルに表示する
 // （チャットを長くしないため、本文はモーダル側に出す）。
+// 情報源ラベルからモノバッジ種別（CSV/DB/MD/SVG/DOC/REF）を推定する。
+function sourceBadge(s: SourceRef): string {
+  const l = s.label;
+  if (s.image || /構成図|diagram|\.svg/i.test(l)) return 'SVG';
+  if (/エラーコード表|error_codes|\.csv/i.test(l)) return 'CSV';
+  if (/修理履歴|repair_history|履歴DB|DB/i.test(l)) return 'DB';
+  if (/マニュアル|manual|\.md|インタビュー|ベテラン/i.test(l)) return 'MD';
+  if (/報告書|report|\.doc/i.test(l)) return 'DOC';
+  return 'REF';
+}
+
 function SourcesCard({ sources }: { sources: SourceRef[] }) {
   const { t } = useTranslation();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const active = openIndex !== null ? sources[openIndex] : null;
 
   return (
-    <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
-      <div
-        className={`
-          flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2 caption-01
-          text-[var(--green-40)]
-        `}
-      >
-        <FileText className="size-4" />
-        {t('参照情報源')}
-      </div>
-      <ul className="flex flex-col gap-1 p-3">
+    <CardShell title={t('参照情報源')}>
+      <div className="px-3 pt-1 pb-2">
         {sources.map((s, i) => {
           const hasDetail = !!s.content || !!s.image;
           return (
-            <li key={i} className="flex items-start gap-1.5">
-              <span className="mt-1.5 size-1 shrink-0 rounded-full bg-muted-foreground" />
+            <div
+              key={i}
+              className="flex items-center gap-[9px] border-b border-border/50 py-1.5 last:border-b-0"
+            >
+              <span
+                className={`
+                  w-10 shrink-0 rounded border border-border px-[5px] py-[2px] text-center
+                  font-mono text-[9px] text-[var(--azure-50)]
+                `}
+              >
+                {sourceBadge(s)}
+              </span>
               <button
                 type="button"
-                onClick={() => setOpenIndex(i)}
+                onClick={() => hasDetail && setOpenIndex(i)}
                 className={cn(
-                  'text-left body-secondary text-[var(--green-40)] underline-offset-2 hover:underline',
-                  !hasDetail && 'pointer-events-none text-foreground no-underline'
+                  'text-left text-[12px] text-foreground',
+                  hasDetail ? 'hover:underline' : 'pointer-events-none'
                 )}
               >
+                {hasDetail && <span className="mr-[5px]">🔗</span>}
                 {s.label}
-                {s.image && <span className="ml-1 text-muted-foreground">🖼</span>}
               </button>
-            </li>
+            </div>
           );
         })}
-      </ul>
+      </div>
       <Dialog open={openIndex !== null} onOpenChange={open => !open && setOpenIndex(null)}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
@@ -851,7 +908,7 @@ function SourcesCard({ sources }: { sources: SourceRef[] }) {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </CardShell>
   );
 }
 
@@ -887,32 +944,27 @@ function TriageCard({ fields }: { fields: TriageField[] }) {
       return next;
     });
   const inputCls =
-    'w-full resize-y rounded border border-border bg-background px-2 py-1 body-secondary text-foreground! focus:border-primary focus:outline-none';
+    'w-full resize-y rounded border border-border bg-background px-2 py-1 text-[12.5px] text-foreground! focus:border-primary focus:outline-none';
 
   return (
-    <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
-      <div
-        className={`
-          flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2 caption-01
-          text-muted-foreground
-        `}
-      >
-        <FileText className="size-4" />
-        {t('現時点の推定原因・類似傾向')}
-      </div>
+    <CardShell
+      title={t('現時点の推定原因・類似傾向')}
+      right={<span className="font-mono text-[9.5px] text-foreground">TRIAGE</span>}
+    >
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse body-secondary text-foreground!">
+        <table className="w-full border-collapse text-foreground!">
           <tbody>
             {fields.map((f, i) => (
-              <tr key={i} className="border-b border-border last:border-b-0 align-top">
+              <tr key={i} className="align-top">
                 <th
                   className={`
-                    w-40 border-r border-border bg-muted/20 px-3 py-2 text-left font-medium
+                    w-24 border-b border-border/50 bg-muted/40 px-3 py-[7px] text-left
+                    text-[11.5px] font-normal text-foreground
                   `}
                 >
                   {f.label}
                 </th>
-                <td className="px-3 py-2">
+                <td className="border-b border-border/50 px-3 py-[7px]">
                   <textarea
                     value={values[i] ?? ''}
                     rows={2}
@@ -925,7 +977,7 @@ function TriageCard({ fields }: { fields: TriageField[] }) {
           </tbody>
         </table>
       </div>
-    </div>
+    </CardShell>
   );
 }
 
@@ -958,23 +1010,14 @@ function DispatchBriefingCard({ briefing }: { briefing: DispatchBriefing }) {
   ];
 
   const inputCls =
-    'w-full resize-y rounded-md border border-border bg-background px-2 py-1.5 body-secondary text-foreground! focus:border-primary focus:outline-none disabled:opacity-60';
+    'w-full resize-y rounded border border-border bg-background px-2 py-1.5 text-[12.5px] text-foreground! focus:border-primary focus:outline-none disabled:opacity-60';
 
   return (
-    <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
-      <div
-        className={`
-          flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2 caption-01
-          text-muted-foreground
-        `}
-      >
-        <FileText className="size-4" />
-        {t('FSE派遣ブリーフィング（リリース前に確認・編集）')}
-      </div>
+    <CardShell rail="purple" title={t('FSE派遣ブリーフィング（リリース前に確認・編集）')}>
       <div className="flex flex-col gap-3 p-3">
         {rows.map(({ key, label, multiline }) => (
           <label key={key} className="flex flex-col gap-1">
-            <span className="caption-01 text-[var(--green-40)]">{label}</span>
+            <span className="text-[11px] font-medium text-[var(--accent)]">{label}</span>
             {multiline ? (
               <textarea
                 value={fields[key]}
@@ -989,7 +1032,7 @@ function DispatchBriefingCard({ briefing }: { briefing: DispatchBriefing }) {
                 value={fields[key]}
                 disabled={released || isAgentRunning}
                 onChange={e => update(key, e.target.value)}
-                className={inputCls}
+                className={cn(inputCls, 'font-mono')}
               />
             )}
           </label>
@@ -1001,22 +1044,18 @@ function DispatchBriefingCard({ briefing }: { briefing: DispatchBriefing }) {
               disabled={isAgentRunning}
               onClick={onRelease}
               className={cn(
-                `
-                  rounded-md bg-[var(--green-40)] px-4 py-2 body-secondary
-                  text-black
-                  hover:opacity-90
-                `,
+                'rounded bg-[var(--purple-60)] px-[14px] py-1.5 text-[11.5px] font-bold text-white hover:opacity-90',
                 'disabled:cursor-not-allowed disabled:opacity-50'
               )}
             >
-              {t('FSEに派遣情報をリリース')}
+              {t('FSEに派遣情報をリリース')} →
             </button>
           </div>
         ) : (
-          <div className="caption-01 text-[var(--green-40)]">{t('FSEへリリース済み')}</div>
+          <div className="text-[11px] text-[var(--accent)]">{t('FSEへリリース済み')}</div>
         )}
       </div>
-    </div>
+    </CardShell>
   );
 }
 
@@ -1065,16 +1104,7 @@ function EditableActionTable({ rows: initialRows }: { rows: StepRow[] }) {
     'w-full resize-y rounded border border-border bg-background px-2 py-1 body-secondary text-foreground! focus:border-primary focus:outline-none disabled:opacity-60';
 
   return (
-    <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
-      <div
-        className={`
-          flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2 caption-01
-          text-muted-foreground
-        `}
-      >
-        <CheckCircle2 className="size-4" />
-        {t('FSEへのネクストアクション（編集・リリース）')}
-      </div>
+    <CardShell rail="purple" title={t('FSEへのネクストアクション（編集・リリース）')}>
       <div className="flex flex-col gap-3 p-3">
         {rows.map((row, i) => (
           <div key={i} className="rounded-md border border-border p-2">
@@ -1137,23 +1167,19 @@ function EditableActionTable({ rows: initialRows }: { rows: StepRow[] }) {
               onClick={onRelease}
               disabled={isAgentRunning}
               className={cn(
-                `
-                  rounded-md bg-[var(--green-40)] px-4 py-1.5 body-secondary
-                  text-black
-                  hover:opacity-90
-                `,
+                'rounded bg-[var(--purple-60)] px-[14px] py-1.5 text-[11.5px] font-bold text-white hover:opacity-90',
                 'disabled:cursor-not-allowed disabled:opacity-50'
               )}
             >
-              {t('FSEにリリース')}
+              {t('FSEにリリース')} →
             </button>
           </div>
         )}
         {released && (
-          <div className="caption-01 text-[var(--green-40)]">{t('FSEへリリース済み')}</div>
+          <div className="text-[11px] text-[var(--accent)]">{t('FSEへリリース済み')}</div>
         )}
       </div>
-    </div>
+    </CardShell>
   );
 }
 
@@ -1189,31 +1215,20 @@ function HandoffDraftCard({ handoff }: { handoff: HandoffDraft }) {
   ];
 
   return (
-    <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
-      <div
-        className={`
-          flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2 caption-01
-          text-muted-foreground
-        `}
-      >
-        <FileText className="size-4" />
-        {t('HQ引き継ぎ要約（発行前に確認・編集）')}
-      </div>
+    <CardShell rail="purple" title={t('HQ引き継ぎ要約（発行前に確認・編集）')}>
       <div className="flex flex-col gap-3 p-3">
         {rows.map(({ key, label }) => (
           <label key={key} className="flex flex-col gap-1">
-            <span className="caption-01 text-[var(--green-40)]">{label}</span>
+            <span className="text-[11px] font-medium text-[var(--accent)]">{label}</span>
             <textarea
               value={fields[key]}
               disabled={issued || isAgentRunning}
               onChange={e => update(key, e.target.value)}
               rows={key === 'summary' || key === 'open_questions' ? 3 : 1}
-              className={`
-                w-full resize-y rounded-md border border-border bg-background px-2 py-1.5
-                body-secondary text-foreground!
-                focus:border-primary focus:outline-none
-                disabled:opacity-60
-              `}
+              className={cn(
+                'w-full resize-y rounded border border-border bg-background px-2 py-1.5 text-[12.5px] text-foreground! focus:border-primary focus:outline-none disabled:opacity-60',
+                key === 'parent_dispatch_id' && 'font-mono'
+              )}
             />
           </label>
         ))}
@@ -1223,19 +1238,15 @@ function HandoffDraftCard({ handoff }: { handoff: HandoffDraft }) {
             disabled={issued || isAgentRunning}
             onClick={onIssue}
             className={cn(
-              `
-                rounded-md bg-[var(--green-40)] px-4 py-2 body-secondary
-                text-black transition-colors
-                hover:opacity-90
-              `,
+              'rounded bg-[var(--purple-60)] px-[14px] py-1.5 text-[11.5px] font-bold text-white transition-colors hover:opacity-90',
               'disabled:cursor-not-allowed disabled:opacity-50'
             )}
           >
-            {issued ? t('発行中…') : t('この内容で相談票を発行')}
+            {issued ? t('発行中…') : `${t('この内容で相談票を発行')} →`}
           </button>
         </div>
       </div>
-    </div>
+    </CardShell>
   );
 }
 
@@ -1279,59 +1290,44 @@ function ReportCard({ report, dispatchId }: { report: string; dispatchId?: strin
   };
 
   return (
-    <div className="my-2 overflow-hidden rounded-lg border border-border bg-card/50">
-      <div
-        className={`
-          flex items-center justify-between gap-2 border-b border-border bg-muted/30
-          px-3 py-2 caption-01 text-[var(--green-40)]
-        `}
-      >
-        <span className="flex items-center gap-2">
-          <FileText className="size-4" />
-          {t('サービス報告書ドラフト')}
-        </span>
-        <span className="flex items-center gap-2">
+    <CardShell
+      title={t('サービス報告書ドラフト')}
+      right={
+        <span className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => setEditing(e => !e)}
-            className={`
-              rounded-md bg-[var(--green-40)] px-3 py-1.5 body-secondary text-black
-              transition-colors
-              hover:opacity-90
-            `}
+            className="rounded border border-border bg-transparent px-[10px] py-1 text-[11px] text-foreground hover:bg-accent hover:text-accent-foreground"
           >
             {editing ? t('プレビュー') : t('編集')}
           </button>
           <button
             type="button"
             onClick={onDownload}
-            className={`
-              flex items-center gap-1.5 rounded-md bg-[var(--green-40)] px-3 py-1.5
-              body-secondary text-black transition-colors
-              hover:opacity-90
-            `}
+            className="flex items-center gap-1.5 rounded bg-[var(--green-50)] px-[10px] py-1 text-[11px] font-bold text-black hover:opacity-90"
           >
-            <Download className="size-3.5" />
-            {t('Wordでダウンロード')}
+            <Download className="size-3" />
+            {t('Word出力')}
           </button>
         </span>
-      </div>
+      }
+    >
       {editing && (
         <textarea
           value={draft}
           onChange={e => onChange(e.target.value)}
           className={`
             min-h-64 w-full resize-y border-b border-border bg-background px-4 py-3
-            body-secondary text-foreground!
+            text-[12px] text-foreground!
             focus:outline-none
           `}
         />
       )}
       {/* プレビューは常にレンダリングしておき、Wordダウンロード時にこのHTMLを使う */}
-      <div ref={previewRef} className={cn('px-4 py-3', editing && 'hidden')}>
+      <div ref={previewRef} className={cn('px-4 py-3 text-[12px]', editing && 'hidden')}>
         <Markdown>{draft}</Markdown>
       </div>
-    </div>
+    </CardShell>
   );
 }
 
@@ -1564,57 +1560,63 @@ function ChatMessageContent({
   type = 'default',
 }: ChatMessageEvent) {
   const isUser = role === 'user';
-  const Icon = useMemo(() => {
-    if (isUser) {
-      return User;
-    } else if (role === 'system') {
-      return Cog;
-    } else if (role === 'reasoning') {
-      return Brain;
-    } else if (content.parts.some(({ type }) => type === 'tool-invocation')) {
-      return Hammer;
-    } else {
-      return Bot;
-    }
-  }, [role, content.parts]);
+  const dataAttrs = {
+    'data-message-id': id,
+    'data-thread-id': threadId,
+    'data-resource-id': resourceId,
+    'data-testid': `${type}-${role}-message-${id}`,
+  };
+  const body = content.parts.map((part, i) => <UniversalContentPart key={i} part={part} />);
 
-  return (
-    <div
-      className={cn('flex gap-3 rounded-lg p-4', isUser ? 'bg-card' : '')}
-      data-message-id={id}
-      data-thread-id={threadId}
-      data-resource-id={resourceId}
-      data-testid={`${type}-${role}-message-${id}`}
-    >
-      <div className="shrink-0">
-        <div
-          className={cn(
-            'flex size-8 items-center justify-center rounded-full',
-            isUser
-              ? 'bg-primary text-primary-foreground'
-              : role === 'assistant'
-                ? 'bg-secondary text-secondary-foreground'
-                : role === 'reasoning'
-                  ? 'bg-muted text-muted-foreground'
-                  : 'bg-accent text-accent-foreground'
-          )}
+  if (isUser) {
+    return (
+      <div className="flex items-start gap-2.5" {...dataAttrs}>
+        <span
+          className={`
+            flex size-[26px] shrink-0 items-center justify-center rounded-[5px]
+            border border-[var(--green-40)] bg-muted/30 font-mono text-[10px]
+            text-[var(--green-40)]
+          `}
         >
-          <Icon className="size-4" />
-        </div>
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="mb-1 flex items-center gap-2">
-          <span className="mn-label capitalize">{role}</span>
-        </div>
+          YOU
+        </span>
         <div
           className={`
-            overflow-hidden body text-wrap break-words
+            min-w-0 flex-1 overflow-hidden rounded-[6px] border border-border bg-card
+            px-[13px] py-2 text-[13px] leading-[1.5] text-foreground break-words
             [line-break:anywhere]
           `}
         >
-          {content.parts.map((part, i) => (
-            <UniversalContentPart key={i} part={part} />
-          ))}
+          {body}
+        </div>
+      </div>
+    );
+  }
+
+  const isAssistant = role === 'assistant';
+  return (
+    <div className="flex items-start gap-2.5" {...dataAttrs}>
+      <span
+        className={cn(
+          'flex size-[26px] shrink-0 items-center justify-center rounded-[5px] text-[12px] font-bold',
+          isAssistant ? 'bg-[var(--green-50)] text-black' : 'bg-muted text-muted-foreground'
+        )}
+      >
+        {isAssistant ? '◆' : role === 'reasoning' ? '…' : '•'}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="mb-1.5 flex items-center gap-2">
+          <span className="text-[12px] font-semibold text-foreground uppercase">
+            {isAssistant ? 'AGENT' : role}
+          </span>
+          {isAssistant && (
+            <span className="rounded border border-border px-[5px] font-mono text-[9.5px] tracking-[0.05em] text-foreground uppercase">
+              DRAFT
+            </span>
+          )}
+        </div>
+        <div className="overflow-hidden text-[13px] leading-[1.6] text-foreground break-words [line-break:anywhere]">
+          {body}
         </div>
       </div>
     </div>

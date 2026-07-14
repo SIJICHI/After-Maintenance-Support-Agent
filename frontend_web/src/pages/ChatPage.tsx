@@ -27,6 +27,7 @@ import { type MessageResponse } from '@/api/chat/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useMainLayout } from '@/components/block/chat/main-layout-context';
 import { ProcessMap } from '@/components/block/chat/process-map';
+import { ChatTopbar } from '@/components/block/chat/chat-topbar';
 
 const initialMessages: MessageResponse[] = [
   {
@@ -104,10 +105,12 @@ export function ChatImplementation({ chatId }: { chatId: string }) {
   // });
 
   return (
-    <div className="flex size-full min-h-0 gap-2">
-      <ProcessMap events={combinedEvents} scrollRef={scrollContainerRef} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Chat initialMessages={initialMessages}>
+    <div className="flex size-full min-h-0 flex-col">
+      <ChatTopbar events={combinedEvents} />
+      <div className="flex min-h-0 flex-1">
+        <ProcessMap events={combinedEvents} scrollRef={scrollContainerRef} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Chat initialMessages={initialMessages}>
           <ScrollArea
             className="mb-5 min-h-0 w-full flex-1"
             scrollViewportRef={scrollContainerRef}
@@ -135,13 +138,14 @@ export function ChatImplementation({ chatId }: { chatId: string }) {
             </div>
           </ScrollArea>
 
-          <ChatTextInput
-            userInput={userInput}
-            setUserInput={setUserInput}
-            onSubmit={sendMessage}
-            runningAgent={isAgentRunning}
-          />
-        </Chat>
+            <ChatTextInput
+              userInput={userInput}
+              setUserInput={setUserInput}
+              onSubmit={sendMessage}
+              runningAgent={isAgentRunning}
+            />
+          </Chat>
+        </div>
       </div>
     </div>
   );
