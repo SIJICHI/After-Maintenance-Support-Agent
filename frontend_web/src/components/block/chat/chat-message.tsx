@@ -1,9 +1,19 @@
-import { memo, useMemo, useState, useRef, Component, type ReactNode, type ErrorInfo } from 'react';
+import {
+  memo,
+  useMemo,
+  useState,
+  useRef,
+  Component,
+  createContext,
+  useContext,
+  type ReactNode,
+  type ErrorInfo,
+} from 'react';
 import { Wrench, ChevronRight, CheckCircle2, Loader2, AlertTriangle, Download } from 'lucide-react';
 import { CodeBlock } from '@/components/ui/code-block';
 import { cn } from '@/lib/utils';
 import type { ContentPart, ToolInvocationUIPart, ChatMessageEvent } from './types';
-import { useMessageStepLabel } from './process-map';
+import { useStepLabel } from './process-map';
 import { useChatContext } from '@/components/block/chat/hooks/use-chat-context';
 import { Badge } from '@/components/ui/badge';
 import { Markdown } from '@/components/block/markdown';
@@ -475,6 +485,22 @@ interface HearingRow {
 }
 
 // 成果物カード共通シェル（1b Ops Console）。左1pxのステータスレール＋大文字ヘッダ。
+// 各成果物カードから、自身が属するメッセージIDを参照できるようにする（プロセスタグ算出用）。
+const MessageIdContext = createContext<string>('');
+
+// 成果物(artifact)ごとのプロセスステップタグ。プロセスマップの対応行と完全一致（連番込み）。
+// 該当ステップが無い成果物（例: 情報源）では何も描画しない。
+function ArtifactStepTag({ artifact }: { artifact: string }) {
+  const id = useContext(MessageIdContext);
+  const label = useStepLabel(id, artifact);
+  if (!label) return null;
+  return (
+    <div className="mt-2 text-[11px] font-semibold tracking-[0.02em] text-[var(--green-40)]">
+      [{label}]
+    </div>
+  );
+}
+
 // rail: 'green'=情報/成果物系, 'purple'=フォーム系（派遣ブリーフィング/ネクストアクション/引き継ぎ）。
 function CardShell({
   rail = 'green',
@@ -1352,16 +1378,19 @@ export function TextContentPart({ content }: { content: string }) {
       <Markdown>{text}</Markdown>
       {triage && triage.length > 0 && (
         <div data-artifact="triage">
+          <ArtifactStepTag artifact="triage" />
           <TriageCard fields={triage} />
         </div>
       )}
       {sources && sources.length > 0 && (
         <div data-artifact="sources">
+          <ArtifactStepTag artifact="sources" />
           <SourcesCard sources={sources} />
         </div>
       )}
       {steps.length > 0 && (
         <div data-artifact="steps">
+          <ArtifactStepTag artifact="steps" />
           <StepChecklist
             steps={steps}
             completeQuestion={completeQuestion}
@@ -1371,6 +1400,7 @@ export function TextContentPart({ content }: { content: string }) {
       )}
       {hearing && hearing.length > 0 && (
         <div data-artifact="hearing">
+          <ArtifactStepTag artifact="hearing" />
           <StepChecklist
             steps={hearing}
             title={t('ヒアリング項目（お客様へ確認）')}
@@ -1390,21 +1420,25 @@ export function TextContentPart({ content }: { content: string }) {
       )}
       {rseActions && (
         <div data-artifact="rse-actions">
+          <ArtifactStepTag artifact="rse-actions" />
           <EditableActionTable rows={rseActions} />
         </div>
       )}
       {briefing && (
         <div data-artifact="briefing">
+          <ArtifactStepTag artifact="briefing" />
           <DispatchBriefingCard briefing={briefing} />
         </div>
       )}
       {handoff && (
         <div data-artifact="handoff">
+          <ArtifactStepTag artifact="handoff" />
           <HandoffDraftCard handoff={handoff} />
         </div>
       )}
       {report && (
         <div data-artifact="report">
+          <ArtifactStepTag artifact="report" />
           <ReportCard report={report} dispatchId={reportDispatchId} />
         </div>
       )}
@@ -1565,7 +1599,9 @@ function ChatMessageContent({
   type = 'default',
 }: ChatMessageEvent) {
   const { t } = useTranslation();
-  const messageStepLabel = useMessageStepLabel(id);
+  // 成果物に紐づかないメッセージ単位ステップ（事案入力/受付/RSE入力/リリース等）。成果物カードの
+  // タグは各カード側(ArtifactStepTag)が担当する。
+  const messageLevelStep = useStepLabel(id, undefined);
   const isUser = role === 'user';
   const dataAttrs = {
     'data-message-id': id,
@@ -1573,7 +1609,13 @@ function ChatMessageContent({
     'data-resource-id': resourceId,
     'data-testid': `${type}-${role}-message-${id}`,
   };
-  const body = content.parts.map((part, i) => <UniversalContentPart key={i} part={part} />);
+  const body = (
+    <MessageIdContext.Provider value={id}>
+      {content.parts.map((part, i) => (
+        <UniversalContentPart key={i} part={part} />
+      ))}
+    </MessageIdContext.Provider>
+  );
 
   if (isUser) {
     return (
@@ -1587,21 +1629,27 @@ function ChatMessageContent({
         >
           YOU
         </span>
-        <div
-          className={`
-            min-w-0 flex-1 overflow-hidden rounded-[6px] border border-border bg-card
-            px-[13px] py-2 text-[13px] leading-[1.5] text-foreground break-words
-            [line-break:anywhere]
-          `}
-        >
-          {body}
+        <div className="min-w-0 flex-1">
+          {messageLevelStep && (
+            <div className="mb-1 text-[11px] font-semibold tracking-[0.02em] text-[var(--green-40)]">
+              [{messageLevelStep}]
+            </div>
+          )}
+          <div
+            className={`
+              overflow-hidden rounded-[6px] border border-border bg-card px-[13px] py-2
+              text-[13px] leading-[1.5] text-foreground break-words [line-break:anywhere]
+            `}
+          >
+            {body}
+          </div>
         </div>
       </div>
     );
   }
 
   const isAssistant = role === 'assistant';
-  const stepLabel = isAssistant ? messageStepLabel : null;
+  const stepLabel = isAssistant ? messageLevelStep : null;
   return (
     <div className="flex items-start gap-2.5" {...dataAttrs}>
       <span

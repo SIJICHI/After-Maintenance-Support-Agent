@@ -144,11 +144,13 @@ export function ProcessStepsProvider({
   return <ProcessStepsContext.Provider value={steps}>{children}</ProcessStepsContext.Provider>;
 }
 
-// 指定メッセージIDに対応するプロセスステップのラベル（連番込み）を返す。
-// 1メッセージに複数ステップがある場合は先頭を採用する（AGENTヘッダのタグは1つ）。
-export function useMessageStepLabel(id: string): string | null {
+// 指定メッセージID＋成果物(artifact)に対応するプロセスステップのラベル（連番込み）を返す。
+// artifact を省略した場合は成果物に紐づかないメッセージ単位ステップ（事案入力/受付/リリース等）を返す。
+// これによりプロセスマップの全項目が、右側の対応する出力（カード or メッセージヘッダ）に
+// 必ず同一ラベルのタグとして現れる。
+export function useStepLabel(id: string, artifact?: string): string | null {
   const steps = useContext(ProcessStepsContext);
-  const step = steps.find(s => s.id === id);
+  const step = steps.find(s => s.id === id && s.artifact === artifact);
   return step ? step.label : null;
 }
 
