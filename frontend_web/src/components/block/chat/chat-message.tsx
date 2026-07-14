@@ -2,7 +2,8 @@ import { memo, useMemo, useState, useRef, Component, type ReactNode, type ErrorI
 import { Wrench, ChevronRight, CheckCircle2, Loader2, AlertTriangle, Download } from 'lucide-react';
 import { CodeBlock } from '@/components/ui/code-block';
 import { cn } from '@/lib/utils';
-import type { ContentPart, ToolInvocationUIPart, ChatMessageEvent, MessageContent } from './types';
+import type { ContentPart, ToolInvocationUIPart, ChatMessageEvent } from './types';
+import { useMessageStepLabel } from './process-map';
 import { useChatContext } from '@/components/block/chat/hooks/use-chat-context';
 import { Badge } from '@/components/ui/badge';
 import { Markdown } from '@/components/block/markdown';
@@ -1555,26 +1556,6 @@ function ToolInvocationCard({
   );
 }
 
-// アシスタントメッセージ本文（マーカー）から、AGENTヘッダに出すプロセスステップ名を判定する。
-function agentStepLabel(content: MessageContent, t: (s: string) => string): string | null {
-  const text =
-    content.content ||
-    content.parts
-      .map(p => (p.type === 'text' ? p.text : p.type === 'reasoning' ? p.reasoning : ''))
-      .join('\n');
-  const has = (m: string) => text.includes(m);
-  if (has('[[hearing]]')) return t('ヒアリング');
-  if (has('[[triage]]')) return t('原因切り分け');
-  if (has('[[steps]]')) return t('作業手順');
-  if (has('[[rse_actions]]')) return t('ネクストアクション');
-  if (has('[[dispatch_briefing]]')) return t('派遣ブリーフィング');
-  if (has('[[handoff_draft]]')) return t('引き継ぎ要約');
-  if (has('[[report]]')) return t('報告書');
-  if (text.includes('リリースしました')) return t('リリース');
-  if (/を確認しました|従業員ID|IDを入力/.test(text)) return t('受付');
-  return null;
-}
-
 function ChatMessageContent({
   id,
   role,
@@ -1584,6 +1565,7 @@ function ChatMessageContent({
   type = 'default',
 }: ChatMessageEvent) {
   const { t } = useTranslation();
+  const messageStepLabel = useMessageStepLabel(id);
   const isUser = role === 'user';
   const dataAttrs = {
     'data-message-id': id,
@@ -1619,7 +1601,7 @@ function ChatMessageContent({
   }
 
   const isAssistant = role === 'assistant';
-  const stepLabel = isAssistant ? agentStepLabel(content, t) : null;
+  const stepLabel = isAssistant ? messageStepLabel : null;
   return (
     <div className="flex items-start gap-2.5" {...dataAttrs}>
       <span

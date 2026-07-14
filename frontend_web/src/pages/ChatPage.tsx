@@ -26,7 +26,7 @@ import {
 import { type MessageResponse } from '@/api/chat/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useMainLayout } from '@/components/block/chat/main-layout-context';
-import { ProcessMap } from '@/components/block/chat/process-map';
+import { ProcessMap, ProcessStepsProvider } from '@/components/block/chat/process-map';
 import { ChatTopbar } from '@/components/block/chat/chat-topbar';
 
 const initialMessages: MessageResponse[] = [
@@ -107,50 +107,52 @@ export function ChatImplementation({ chatId }: { chatId: string }) {
   return (
     <div className="flex size-full min-h-0 flex-col">
       <ChatTopbar events={combinedEvents} />
-      <div className="flex min-h-0 flex-1">
-        <ProcessMap events={combinedEvents} scrollRef={scrollContainerRef} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Chat initialMessages={initialMessages}>
-            <ScrollArea
-              className="mb-5 min-h-0 w-full flex-1"
-              scrollViewportRef={scrollContainerRef}
-              onWheel={onChatScroll}
-            >
-              <div className="w-full justify-self-center">
-                <ChatMessages
-                  isLoading={isLoadingHistory}
-                  messages={combinedEvents}
-                  chatId={chatId}
-                >
-                  {combinedEvents &&
-                    combinedEvents.map(m => {
-                      if (isErrorStateEvent(m)) {
-                        return <ChatError key={m.value.id} {...m.value} />;
-                      }
-                      if (isMessageStateEvent(m)) {
-                        return <ChatMessageMemo key={m.value.id} {...m.value} />;
-                      }
-                      if (isStepStateEvent(m)) {
-                        return <StepEvent key={m.value.id} {...m.value} />;
-                      }
-                      if (isThinkingEvent(m)) {
-                        return <ThinkingEvent key={m.type} />;
-                      }
-                    })}
-                </ChatMessages>
-                <ChatProgress progress={progress || {}} deleteProgress={deleteProgress} />
-              </div>
-            </ScrollArea>
+      <ProcessStepsProvider events={combinedEvents}>
+        <div className="flex min-h-0 flex-1">
+          <ProcessMap scrollRef={scrollContainerRef} />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <Chat initialMessages={initialMessages}>
+              <ScrollArea
+                className="mb-5 min-h-0 w-full flex-1"
+                scrollViewportRef={scrollContainerRef}
+                onWheel={onChatScroll}
+              >
+                <div className="w-full justify-self-center">
+                  <ChatMessages
+                    isLoading={isLoadingHistory}
+                    messages={combinedEvents}
+                    chatId={chatId}
+                  >
+                    {combinedEvents &&
+                      combinedEvents.map(m => {
+                        if (isErrorStateEvent(m)) {
+                          return <ChatError key={m.value.id} {...m.value} />;
+                        }
+                        if (isMessageStateEvent(m)) {
+                          return <ChatMessageMemo key={m.value.id} {...m.value} />;
+                        }
+                        if (isStepStateEvent(m)) {
+                          return <StepEvent key={m.value.id} {...m.value} />;
+                        }
+                        if (isThinkingEvent(m)) {
+                          return <ThinkingEvent key={m.type} />;
+                        }
+                      })}
+                  </ChatMessages>
+                  <ChatProgress progress={progress || {}} deleteProgress={deleteProgress} />
+                </div>
+              </ScrollArea>
 
-            <ChatTextInput
-              userInput={userInput}
-              setUserInput={setUserInput}
-              onSubmit={sendMessage}
-              runningAgent={isAgentRunning}
-            />
-          </Chat>
+              <ChatTextInput
+                userInput={userInput}
+                setUserInput={setUserInput}
+                onSubmit={sendMessage}
+                runningAgent={isAgentRunning}
+              />
+            </Chat>
+          </div>
         </div>
-      </div>
+      </ProcessStepsProvider>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useMemo, type RefObject } from 'react';
+import { createContext, useContext, useMemo, type ReactNode, type RefObject } from 'react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
 import { isMessageStateEvent } from './types';
@@ -74,64 +74,87 @@ function deriveSteps(
   return [];
 }
 
-export function ProcessMap({
+// プロセスマップのステップ一覧を算出する（連番付与まで含む単一ソース）。
+// プロセスマップの表示と、AGENTヘッダの [ステップ名] タグはこの同一結果を参照して完全一致させる。
+export function computeProcessSteps(
+  events: ChatStateEvent[],
+  t: (s: string) => string
+): ProcessStep[] {
+  // 会話からペルソナを判定（従業員ID FSE####/RSE####、本文中のID、[FIELD]/[REMOTE]タグ）
+  let persona: 'FSE' | 'RSE' | null = null;
+  for (const e of events) {
+    if (!isMessageStateEvent(e)) continue;
+    const m = e.value;
+    if (m.role !== 'user') continue;
+    const txt = messageText(m).trim();
+    if (/\bFSE\d+/i.test(txt) || txt.includes('[FIELD]')) {
+      persona = 'FSE';
+      break;
+    }
+    if (/\bRSE\d+/i.test(txt) || txt.includes('[REMOTE]')) {
+      persona = 'RSE';
+      break;
+    }
+  }
+
+  const result: ProcessStep[] = [];
+  let seenFirstUserPrompt = false;
+  for (const e of events) {
+    if (!isMessageStateEvent(e)) continue;
+    const msg = e.value;
+    const isFirstUserPrompt = msg.role === 'user' && !seenFirstUserPrompt;
+    const derived = deriveSteps(msg, isFirstUserPrompt, persona, t);
+    if (
+      msg.role === 'user' &&
+      derived.length > 0 &&
+      !EMPLOYEE_ID_RE.test(messageText(msg).trim())
+    ) {
+      seenFirstUserPrompt = true;
+    }
+    for (const d of derived) {
+      result.push({ id: msg.id, artifact: d.artifact, label: d.label });
+    }
+  }
+
+  // 同一ラベルが複数回出る場合は連番 (1)(2)… を付与
+  const total: Record<string, number> = {};
+  for (const s of result) total[s.label] = (total[s.label] ?? 0) + 1;
+  const seen: Record<string, number> = {};
+  for (const s of result) {
+    if (total[s.label] > 1) {
+      seen[s.label] = (seen[s.label] ?? 0) + 1;
+      s.label = `${s.label} (${seen[s.label]})`;
+    }
+  }
+  return result;
+}
+
+// 算出済みステップをツリーに供給し、AGENTヘッダ側から同一データを参照できるようにする。
+const ProcessStepsContext = createContext<ProcessStep[]>([]);
+
+export function ProcessStepsProvider({
   events,
-  scrollRef,
+  children,
 }: {
   events: ChatStateEvent[];
-  scrollRef: RefObject<HTMLDivElement | null>;
+  children: ReactNode;
 }) {
   const { t } = useTranslation();
+  const steps = useMemo(() => computeProcessSteps(events, t), [events, t]);
+  return <ProcessStepsContext.Provider value={steps}>{children}</ProcessStepsContext.Provider>;
+}
 
-  const steps = useMemo<ProcessStep[]>(() => {
-    // 会話からペルソナを判定（従業員ID FSE####/RSE####、本文中のID、[FIELD]/[REMOTE]タグ）
-    let persona: 'FSE' | 'RSE' | null = null;
-    for (const e of events) {
-      if (!isMessageStateEvent(e)) continue;
-      const m = e.value;
-      if (m.role !== 'user') continue;
-      const txt = messageText(m).trim();
-      if (/\bFSE\d+/i.test(txt) || txt.includes('[FIELD]')) {
-        persona = 'FSE';
-        break;
-      }
-      if (/\bRSE\d+/i.test(txt) || txt.includes('[REMOTE]')) {
-        persona = 'RSE';
-        break;
-      }
-    }
+// 指定メッセージIDに対応するプロセスステップのラベル（連番込み）を返す。
+// 1メッセージに複数ステップがある場合は先頭を採用する（AGENTヘッダのタグは1つ）。
+export function useMessageStepLabel(id: string): string | null {
+  const steps = useContext(ProcessStepsContext);
+  const step = steps.find(s => s.id === id);
+  return step ? step.label : null;
+}
 
-    const result: ProcessStep[] = [];
-    let seenFirstUserPrompt = false;
-    for (const e of events) {
-      if (!isMessageStateEvent(e)) continue;
-      const msg = e.value;
-      const isFirstUserPrompt = msg.role === 'user' && !seenFirstUserPrompt;
-      const derived = deriveSteps(msg, isFirstUserPrompt, persona, t);
-      if (
-        msg.role === 'user' &&
-        derived.length > 0 &&
-        !EMPLOYEE_ID_RE.test(messageText(msg).trim())
-      ) {
-        seenFirstUserPrompt = true;
-      }
-      for (const d of derived) {
-        result.push({ id: msg.id, artifact: d.artifact, label: d.label });
-      }
-    }
-
-    // 同一ラベルが複数回出る場合は連番 (1)(2)… を付与
-    const total: Record<string, number> = {};
-    for (const s of result) total[s.label] = (total[s.label] ?? 0) + 1;
-    const seen: Record<string, number> = {};
-    for (const s of result) {
-      if (total[s.label] > 1) {
-        seen[s.label] = (seen[s.label] ?? 0) + 1;
-        s.label = `${s.label} (${seen[s.label]})`;
-      }
-    }
-    return result;
-  }, [events, t]);
+export function ProcessMap({ scrollRef }: { scrollRef: RefObject<HTMLDivElement | null> }) {
+  const { t } = useTranslation();
+  const steps = useContext(ProcessStepsContext);
 
   const onJump = (step: ProcessStep) => {
     const container = scrollRef.current;
