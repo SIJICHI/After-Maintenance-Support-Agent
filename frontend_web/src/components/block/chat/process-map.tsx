@@ -61,8 +61,7 @@ function deriveSteps(
       steps.push({ label: t('ネクストアクション ドラフト'), artifact: 'rse-actions' });
     if (has('[[dispatch_briefing]]'))
       steps.push({ label: t('FSEブリーフィングのレビュー/編集'), artifact: 'briefing' });
-    if (has('[[handoff_draft]]'))
-      steps.push({ label: t('引き継ぎ要約'), artifact: 'handoff' });
+    if (has('[[handoff_draft]]')) steps.push({ label: t('引き継ぎ要約'), artifact: 'handoff' });
     if (has('[[report]]')) steps.push({ label: t('報告書ドラフト'), artifact: 'report' });
     if (steps.length === 0) {
       if (text.includes('リリースしました') && text.includes('ブリーフィング'))

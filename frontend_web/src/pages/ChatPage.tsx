@@ -111,32 +111,36 @@ export function ChatImplementation({ chatId }: { chatId: string }) {
         <ProcessMap events={combinedEvents} scrollRef={scrollContainerRef} />
         <div className="flex min-w-0 flex-1 flex-col">
           <Chat initialMessages={initialMessages}>
-          <ScrollArea
-            className="mb-5 min-h-0 w-full flex-1"
-            scrollViewportRef={scrollContainerRef}
-            onWheel={onChatScroll}
-          >
-            <div className="w-full justify-self-center">
-              <ChatMessages isLoading={isLoadingHistory} messages={combinedEvents} chatId={chatId}>
-                {combinedEvents &&
-                  combinedEvents.map(m => {
-                    if (isErrorStateEvent(m)) {
-                      return <ChatError key={m.value.id} {...m.value} />;
-                    }
-                    if (isMessageStateEvent(m)) {
-                      return <ChatMessageMemo key={m.value.id} {...m.value} />;
-                    }
-                    if (isStepStateEvent(m)) {
-                      return <StepEvent key={m.value.id} {...m.value} />;
-                    }
-                    if (isThinkingEvent(m)) {
-                      return <ThinkingEvent key={m.type} />;
-                    }
-                  })}
-              </ChatMessages>
-              <ChatProgress progress={progress || {}} deleteProgress={deleteProgress} />
-            </div>
-          </ScrollArea>
+            <ScrollArea
+              className="mb-5 min-h-0 w-full flex-1"
+              scrollViewportRef={scrollContainerRef}
+              onWheel={onChatScroll}
+            >
+              <div className="w-full justify-self-center">
+                <ChatMessages
+                  isLoading={isLoadingHistory}
+                  messages={combinedEvents}
+                  chatId={chatId}
+                >
+                  {combinedEvents &&
+                    combinedEvents.map(m => {
+                      if (isErrorStateEvent(m)) {
+                        return <ChatError key={m.value.id} {...m.value} />;
+                      }
+                      if (isMessageStateEvent(m)) {
+                        return <ChatMessageMemo key={m.value.id} {...m.value} />;
+                      }
+                      if (isStepStateEvent(m)) {
+                        return <StepEvent key={m.value.id} {...m.value} />;
+                      }
+                      if (isThinkingEvent(m)) {
+                        return <ThinkingEvent key={m.type} />;
+                      }
+                    })}
+                </ChatMessages>
+                <ChatProgress progress={progress || {}} deleteProgress={deleteProgress} />
+              </div>
+            </ScrollArea>
 
             <ChatTextInput
               userInput={userInput}

@@ -1,33 +1,13 @@
-import {
-  memo,
-  useMemo,
-  useState,
-  useRef,
-  Component,
-  type ReactNode,
-  type ErrorInfo,
-} from 'react';
-import {
-  Wrench,
-  ChevronRight,
-  CheckCircle2,
-  Loader2,
-  AlertTriangle,
-  Download,
-} from 'lucide-react';
+import { memo, useMemo, useState, useRef, Component, type ReactNode, type ErrorInfo } from 'react';
+import { Wrench, ChevronRight, CheckCircle2, Loader2, AlertTriangle, Download } from 'lucide-react';
 import { CodeBlock } from '@/components/ui/code-block';
 import { cn } from '@/lib/utils';
-import type { ContentPart, ToolInvocationUIPart, ChatMessageEvent } from './types';
+import type { ContentPart, ToolInvocationUIPart, ChatMessageEvent, MessageContent } from './types';
 import { useChatContext } from '@/components/block/chat/hooks/use-chat-context';
 import { Badge } from '@/components/ui/badge';
 import { Markdown } from '@/components/block/markdown';
 import { useTranslation } from '@/lib/i18n';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 // 構成図SVGはViteアセットとしてimportし、dev/デプロイ(ベースパス配下)双方で正しいURLを得る。
 import componentDiagramUrl from '@/assets/component_diagram.svg?url';
 
@@ -223,7 +203,11 @@ const SOURCE_ASSETS: { keyword: RegExp; url: string }[] = [
 
 // 画像パスを表示用URLに解決する。既知アセットはファイル名でViteの実URLに差し替える。
 function resolveAssetUrl(path: string): string {
-  const file = path.split(/[\\/?#]/).filter(Boolean).pop() || path;
+  const file =
+    path
+      .split(/[\\/?#]/)
+      .filter(Boolean)
+      .pop() || path;
   if (KNOWN_ASSET_URLS[file]) return KNOWN_ASSET_URLS[file];
   if (/^(https?:)?\/\//.test(path) || path.startsWith('data:') || path.startsWith('/')) {
     return path;
@@ -509,12 +493,7 @@ function CardShell({
       <span className={cn('w-px shrink-0', railColor)} aria-hidden />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-          <span
-            className={cn(
-              'text-[11px] font-semibold tracking-[0.06em] uppercase',
-              titleColor
-            )}
-          >
+          <span className={cn('text-[11px] font-semibold tracking-[0.06em] uppercase', titleColor)}>
             {title}
           </span>
           {right}
@@ -671,9 +650,7 @@ function StepChecklist({
                     `}
                     aria-label="toggle"
                   >
-                    {row.checked && (
-                      <span className="font-bold text-[var(--green-40)]">✓</span>
-                    )}
+                    {row.checked && <span className="font-bold text-[var(--green-40)]">✓</span>}
                   </button>
                 </td>
                 <td
@@ -697,7 +674,10 @@ function StepChecklist({
                     placeholder={t('詳細（1行に1項目）')}
                     onChange={e =>
                       updateRow(i, {
-                        details: e.target.value.split('\n').map(s => s.trim()).filter(Boolean),
+                        details: e.target.value
+                          .split('\n')
+                          .map(s => s.trim())
+                          .filter(Boolean),
                       })
                     }
                     className={inputCls}
@@ -767,7 +747,9 @@ function StepChecklist({
       </div>
       {allDone && completeChoices && completeChoices.length > 0 && (
         <div className="border-t border-border/50 bg-muted/20 p-3">
-          {completeQuestion && <div className="mb-2 text-[13px] font-semibold">{completeQuestion}</div>}
+          {completeQuestion && (
+            <div className="mb-2 text-[13px] font-semibold">{completeQuestion}</div>
+          )}
           <QuickReplies choices={completeChoices} />
         </div>
       )}
@@ -1074,13 +1056,30 @@ function EditableActionTable({ rows: initialRows }: { rows: StepRow[] }) {
   const setDetails = (i: number, v: string) =>
     setRows(prev =>
       prev.map((r, idx) =>
-        idx === i ? { ...r, details: v.split('\n').map(s => s.trim()).filter(Boolean) } : r
+        idx === i
+          ? {
+              ...r,
+              details: v
+                .split('\n')
+                .map(s => s.trim())
+                .filter(Boolean),
+            }
+          : r
       )
     );
   const setNotes = (i: number, v: string) =>
     setRows(prev =>
       prev.map((r, idx) =>
-        idx === i ? { ...r, notes: v.split('\n').map(s => s.trim()).filter(Boolean).join(';') } : r
+        idx === i
+          ? {
+              ...r,
+              notes: v
+                .split('\n')
+                .map(s => s.trim())
+                .filter(Boolean)
+                .join(';'),
+            }
+          : r
       )
     );
   const addRow = () => {
@@ -1094,9 +1093,7 @@ function EditableActionTable({ rows: initialRows }: { rows: StepRow[] }) {
     const valid = rows.filter(r => r.item.trim());
     if (valid.length === 0) return;
     setReleased(true);
-    const pipe = valid
-      .map(r => `${r.item} | ${r.details.join(';')} | ${r.notes}`)
-      .join('\n');
+    const pipe = valid.map(r => `${r.item} | ${r.details.join(';')} | ${r.notes}`).join('\n');
     sendMessage(`以下のネクストアクションをFSEにリリースしてください。\n${pipe}`);
   };
 
@@ -1454,7 +1451,14 @@ export function ToolInvocationPart({ part }: { part: ToolInvocationUIPart }) {
     });
   }
 
-  return <ToolInvocationCard toolName={toolInvocation.toolName} args={toolInvocation.args} result={result} hasResult={hasResult} />;
+  return (
+    <ToolInvocationCard
+      toolName={toolInvocation.toolName}
+      args={toolInvocation.args}
+      result={result}
+      hasResult={hasResult}
+    />
+  );
 }
 
 // Tool Call カード。デフォルトは折りたたみ（ヘッダークリックで Arguments / Result を開閉）。
@@ -1551,6 +1555,26 @@ function ToolInvocationCard({
   );
 }
 
+// アシスタントメッセージ本文（マーカー）から、AGENTヘッダに出すプロセスステップ名を判定する。
+function agentStepLabel(content: MessageContent, t: (s: string) => string): string | null {
+  const text =
+    content.content ||
+    content.parts
+      .map(p => (p.type === 'text' ? p.text : p.type === 'reasoning' ? p.reasoning : ''))
+      .join('\n');
+  const has = (m: string) => text.includes(m);
+  if (has('[[hearing]]')) return t('ヒアリング');
+  if (has('[[triage]]')) return t('原因切り分け');
+  if (has('[[steps]]')) return t('作業手順');
+  if (has('[[rse_actions]]')) return t('ネクストアクション');
+  if (has('[[dispatch_briefing]]')) return t('派遣ブリーフィング');
+  if (has('[[handoff_draft]]')) return t('引き継ぎ要約');
+  if (has('[[report]]')) return t('報告書');
+  if (text.includes('リリースしました')) return t('リリース');
+  if (text.includes('従業員ID')) return t('受付');
+  return null;
+}
+
 function ChatMessageContent({
   id,
   role,
@@ -1559,6 +1583,7 @@ function ChatMessageContent({
   content,
   type = 'default',
 }: ChatMessageEvent) {
+  const { t } = useTranslation();
   const isUser = role === 'user';
   const dataAttrs = {
     'data-message-id': id,
@@ -1594,6 +1619,7 @@ function ChatMessageContent({
   }
 
   const isAssistant = role === 'assistant';
+  const stepLabel = isAssistant ? agentStepLabel(content, t) : null;
   return (
     <div className="flex items-start gap-2.5" {...dataAttrs}>
       <span
@@ -1609,6 +1635,11 @@ function ChatMessageContent({
           <span className="text-[12px] font-semibold text-foreground uppercase">
             {isAssistant ? 'AGENT' : role}
           </span>
+          {isAssistant && stepLabel && (
+            <span className="text-[11px] font-semibold tracking-[0.02em] text-[var(--green-40)]">
+              [{stepLabel}]
+            </span>
+          )}
           {isAssistant && (
             <span className="rounded border border-border px-[5px] font-mono text-[9.5px] tracking-[0.05em] text-foreground uppercase">
               DRAFT
