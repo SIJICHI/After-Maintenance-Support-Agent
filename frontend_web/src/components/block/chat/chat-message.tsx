@@ -1571,7 +1571,7 @@ function agentStepLabel(content: MessageContent, t: (s: string) => string): stri
   if (has('[[handoff_draft]]')) return t('引き継ぎ要約');
   if (has('[[report]]')) return t('報告書');
   if (text.includes('リリースしました')) return t('リリース');
-  if (text.includes('従業員ID')) return t('受付');
+  if (/を確認しました|従業員ID|IDを入力/.test(text)) return t('受付');
   return null;
 }
 
