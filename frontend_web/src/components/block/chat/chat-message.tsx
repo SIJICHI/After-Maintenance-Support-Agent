@@ -999,7 +999,7 @@ function DispatchBriefingCard({ briefing }: { briefing: DispatchBriefing }) {
       <div className="flex flex-col gap-3 p-3">
         {rows.map(({ key, label, multiline }) => (
           <label key={key} className="flex flex-col gap-1">
-            <span className="text-[11px] font-medium text-[var(--accent)]">{label}</span>
+            <span className="text-[11px] font-medium text-[var(--green-40)]">{label}</span>
             {multiline ? (
               <textarea
                 value={fields[key]}
@@ -1216,7 +1216,7 @@ function HandoffDraftCard({ handoff }: { handoff: HandoffDraft }) {
       <div className="flex flex-col gap-3 p-3">
         {rows.map(({ key, label }) => (
           <label key={key} className="flex flex-col gap-1">
-            <span className="text-[11px] font-medium text-[var(--accent)]">{label}</span>
+            <span className="text-[11px] font-medium text-[var(--green-40)]">{label}</span>
             <textarea
               value={fields[key]}
               disabled={issued || isAgentRunning}
