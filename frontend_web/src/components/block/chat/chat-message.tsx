@@ -1718,11 +1718,13 @@ function ChatMessageContent({
     <div className="flex items-start gap-2.5" {...dataAttrs}>
       <span
         className={cn(
-          'flex size-[26px] shrink-0 items-center justify-center rounded-[5px] text-[12px] font-bold',
-          isAssistant ? 'bg-[var(--green-50)] text-black' : 'bg-muted text-muted-foreground'
+          'flex size-[26px] shrink-0 items-center justify-center rounded-[5px] font-bold',
+          isAssistant
+            ? 'bg-[var(--green-50)] font-mono text-[9px] tracking-tight text-black'
+            : 'bg-muted text-[12px] text-muted-foreground'
         )}
       >
-        {isAssistant ? '◆' : role === 'reasoning' ? '…' : '•'}
+        {isAssistant ? 'TSA' : role === 'reasoning' ? '…' : '•'}
       </span>
       <div className="min-w-0 flex-1">
         <div className="mb-1.5 flex items-center gap-2">
