@@ -41,10 +41,10 @@ export function ChatTopbar({ events }: { events: ChatStateEvent[] }) {
       <div className="flex items-center gap-[14px]">
         <SidebarTrigger className="-ml-1 text-foreground" title="サイドバーの表示/非表示" />
         <span className="flex items-center gap-2 text-[12.5px] font-bold tracking-[0.02em] text-foreground">
-          <span className="flex size-[18px] items-center justify-center rounded bg-[var(--green-50)] text-[11px] text-black">
-            A
+          <span className="flex size-[18px] items-center justify-center rounded bg-[var(--green-50)] font-mono text-[7.5px] tracking-tight text-black">
+            TSA
           </span>
-          SUPPORT AGENT
+          TECHNICAL SUPPORT AGENT
         </span>
         <span className="h-4 w-px bg-border" />
         <span className="font-mono text-[11px] text-muted-foreground">{caseId ?? '—'}</span>
