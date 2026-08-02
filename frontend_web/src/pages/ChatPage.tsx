@@ -16,6 +16,8 @@ import {
   ThinkingEvent,
   ChatProvider,
   StartNewChat,
+  ToolCallLog,
+  isToolOnlyAssistantMessage,
 } from '@/components/block/chat';
 import {
   isErrorStateEvent,
@@ -124,20 +126,38 @@ export function ChatImplementation({ chatId }: { chatId: string }) {
                     chatId={chatId}
                   >
                     {combinedEvents &&
-                      combinedEvents.map(m => {
-                        if (isErrorStateEvent(m)) {
-                          return <ChatError key={m.value.id} {...m.value} />;
+                      (() => {
+                        // 連続する「ツール呼び出しのみ」のアシスタントメッセージを
+                        // 1つの折りたたみ処理ログ（ToolCallLog）にまとめ、本文には出さない。
+                        const rendered: React.ReactNode[] = [];
+                        let toolBuffer: (typeof combinedEvents)[number]['value'][] = [];
+                        const flushToolBuffer = () => {
+                          if (toolBuffer.length === 0) return;
+                          const msgs = toolBuffer as Parameters<typeof ToolCallLog>[0]['messages'];
+                          rendered.push(
+                            <ToolCallLog key={`toollog-${toolBuffer[0].id}`} messages={msgs} />
+                          );
+                          toolBuffer = [];
+                        };
+                        for (const m of combinedEvents) {
+                          if (isMessageStateEvent(m) && isToolOnlyAssistantMessage(m.value)) {
+                            toolBuffer.push(m.value);
+                            continue;
+                          }
+                          flushToolBuffer();
+                          if (isErrorStateEvent(m)) {
+                            rendered.push(<ChatError key={m.value.id} {...m.value} />);
+                          } else if (isMessageStateEvent(m)) {
+                            rendered.push(<ChatMessageMemo key={m.value.id} {...m.value} />);
+                          } else if (isStepStateEvent(m)) {
+                            rendered.push(<StepEvent key={m.value.id} {...m.value} />);
+                          } else if (isThinkingEvent(m)) {
+                            rendered.push(<ThinkingEvent key={m.type} />);
+                          }
                         }
-                        if (isMessageStateEvent(m)) {
-                          return <ChatMessageMemo key={m.value.id} {...m.value} />;
-                        }
-                        if (isStepStateEvent(m)) {
-                          return <StepEvent key={m.value.id} {...m.value} />;
-                        }
-                        if (isThinkingEvent(m)) {
-                          return <ThinkingEvent key={m.type} />;
-                        }
-                      })}
+                        flushToolBuffer();
+                        return rendered;
+                      })()}
                   </ChatMessages>
                   <ChatProgress progress={progress || {}} deleteProgress={deleteProgress} />
                 </div>

@@ -1590,6 +1590,70 @@ function ToolInvocationCard({
   );
 }
 
+// アシスタントのメッセージが「ツール呼び出しのみ」かどうか（本文テキストを含まない）。
+// これらは処理ログとして畳み込み、メインの会話には出さない。
+export function isToolOnlyAssistantMessage(msg: ChatMessageEvent): boolean {
+  if (msg.role !== 'assistant') return false;
+  const parts = msg.content?.parts ?? [];
+  return parts.length > 0 && parts.every(p => p.type === 'tool-invocation');
+}
+
+// エージェントの処理ログ（ツール呼び出し群）を1つに畳み込む折りたたみパネル。
+// 既定は閉じており、ヘッダークリックで各ツールの引数・結果を確認できる。
+export function ToolCallLog({ messages }: { messages: ChatMessageEvent[] }) {
+  const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+  const toolParts = messages
+    .flatMap(m => m.content?.parts ?? [])
+    .filter((p): p is ToolInvocationUIPart => p.type === 'tool-invocation');
+  if (toolParts.length === 0) return null;
+  const running = toolParts.some(p => !p.toolInvocation.result);
+
+  return (
+    <div className="my-1.5 flex items-start gap-2.5" data-testid="tool-call-log">
+      <span className="flex size-[26px] shrink-0 items-center justify-center rounded-[5px] bg-muted text-[12px] text-muted-foreground">
+        ⚙
+      </span>
+      <div className="min-w-0 flex-1 overflow-hidden rounded-lg border border-border bg-card/40 dark:bg-card/20">
+        <button
+          type="button"
+          onClick={() => setExpanded(prev => !prev)}
+          className={`
+            flex w-full items-center gap-2 px-3 py-2 text-left transition-colors
+            hover:bg-muted/30
+          `}
+        >
+          <ChevronRight
+            className={cn(
+              'size-3.5 shrink-0 text-muted-foreground transition-transform',
+              expanded && 'rotate-90'
+            )}
+          />
+          <Wrench className="size-4 text-muted-foreground" />
+          <span className="text-[12px] font-semibold text-muted-foreground">
+            {t('エージェントの処理ログ')}
+          </span>
+          <Badge variant="default" className="code">
+            {`${toolParts.length} ${t('件のツール呼び出し')}`}
+          </Badge>
+          {running ? (
+            <Loader2 className="ml-auto size-4 animate-spin text-muted-foreground" />
+          ) : (
+            <CheckCircle2 className="ml-auto size-4 text-green-500 dark:text-[var(--green-40)]" />
+          )}
+        </button>
+        {expanded && (
+          <div className="border-t border-border px-3 py-2">
+            {toolParts.map((part, i) => (
+              <ToolInvocationPart key={i} part={part} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ChatMessageContent({
   id,
   role,

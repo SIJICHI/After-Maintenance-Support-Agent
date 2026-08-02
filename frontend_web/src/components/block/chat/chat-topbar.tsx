@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { isMessageStateEvent } from './types';
 import type { ChatStateEvent, ChatMessageEvent } from './types';
 
@@ -38,6 +39,7 @@ export function ChatTopbar({ events }: { events: ChatStateEvent[] }) {
   return (
     <div className="flex h-10 shrink-0 items-center justify-between border-b border-border bg-[var(--midnight-gray-100)] px-4">
       <div className="flex items-center gap-[14px]">
+        <SidebarTrigger className="-ml-1 text-foreground" title="サイドバーの表示/非表示" />
         <span className="flex items-center gap-2 text-[12.5px] font-bold tracking-[0.02em] text-foreground">
           <span className="flex size-[18px] items-center justify-center rounded bg-[var(--green-50)] text-[11px] text-black">
             A
